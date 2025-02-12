@@ -12,8 +12,19 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table'
-import { AlertTriangle, Pencil, Save, X, Loader2 } from 'lucide-react'
+import { AlertTriangle, Pencil, Save, X, Loader2, Trash2 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useAuth } from '@/components/providers/AuthProvider'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -71,228 +82,232 @@ interface ColumnDataResponse {
   }
 }
 
+interface Column {
+  id: string
+  title: string
+  is_global?: boolean
+  created_by?: string
+}
+
 export function NotionTable({ 
   universities, 
   onRemoveUniversity, 
   isPremium,
   loading: initialLoading = false
 }: NotionTableProps) {
+  const { user } = useAuth()
   const [tableData, setTableData] = useState<TableRowData[]>([])
-  const [columns, setColumns] = useState<Array<{id: string, title: string}>>([
-    { id: 'url', title: 'URL' },
-    { id: 'programs', title: 'Programs' },
-    { id: 'last_updated', title: 'Last Updated' }
+  const [columns, setColumns] = useState<Column[]>([
+    { id: 'url', title: 'URL', is_global: true },
+    { id: 'programs', title: 'Programs', is_global: true },
+    { id: 'last_updated', title: 'Last Updated', is_global: true }
   ])
   const [newColumn, setNewColumn] = useState('')
   const [loading, setLoading] = useState(initialLoading)
   const [error, setError] = useState<string | null>(null)
   const [editingCell, setEditingCell] = useState<{rowId: string, columnId: string} | null>(null)
   const [editValue, setEditValue] = useState('')
+  const [deletingColumn, setDeletingColumn] = useState<string | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
-  const loadData = async () => {
-    if (universities.length > 0) {
-      console.log('Universities changed:', universities);
-      await loadAllData();
-    } else {
-      setTableData([]);
+    const loadData = async () => {
+      if (universities.length > 0) {
+        console.log('Universities changed:', universities);
+        await loadAllData();
+      } else {
+        setTableData([]);
+      }
+    };
+
+    loadData();
+  }, [universities]);
+
+  const loadAllData = async () => {
+    setLoading(true);
+    try {
+      // First initialize basic data
+      const initialData: TableRowData[] = universities.map(uni => {
+        const university = uni.university || uni;
+        return {
+          id: university.id,
+          url: university.url,
+          programs: Array.isArray(university.programs) ? university.programs.join(', ') : university.programs,
+          last_updated: university.last_updated ? new Date(university.last_updated).toLocaleString() : 'N/A',
+          created_at: university.created_at ? new Date(university.created_at).toLocaleString() : 'N/A'
+        };
+      });
+
+      setTableData(initialData);
+
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('Authentication token not found');
+
+      const columnsResponse = await fetch(`${API_URL}/api/columns`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!columnsResponse.ok) throw new Error('Failed to fetch columns');
+      
+      const storedColumns = await columnsResponse.json();
+      const customColumns = storedColumns.map((col: { id: string; name: string; is_global: boolean; created_by: string }) => ({
+        id: col.id,
+        title: col.name,
+        is_global: col.is_global,
+        created_by: col.created_by
+      }));
+
+      setColumns(prev => {
+        const defaultColumns = prev.filter(col => 
+          ['url', 'programs', 'last_updated'].includes(col.id)
+        );
+        return [...defaultColumns, ...customColumns];
+      });
+
+      const universityIds = initialData.map(row => row.id);
+      const dataResponse = await fetch(`${API_URL}/api/columns/data/batch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          university_ids: universityIds
+        })
+      });
+
+      if (!dataResponse.ok) throw new Error('Failed to fetch column data');
+
+      const columnData = await dataResponse.json() as ColumnDataResponse;
+      
+      setTableData(initialData.map(row => {
+        const universityColumnData = columnData[row.id] || {};
+        const updatedRow = { ...row } as TableRowData;
+        
+        Object.entries(universityColumnData).forEach(([columnId, data]) => {
+          if (data && typeof data === 'object' && 'value' in data) {
+            updatedRow[columnId] = data.value;
+          }
+        });
+        
+        return updatedRow;
+      }));
+
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load data"
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  loadData();
-}, [universities]);
-
-  const loadAllData = async () => {
-  setLoading(true);
-  try {
-    // First initialize basic data
-    const initialData: TableRowData[] = universities.map(uni => {
-      // Handle both normal university object and the nested format from new additions
-      const university = uni.university || uni;
-      return {
-        id: university.id,
-        url: university.url,
-        programs: Array.isArray(university.programs) ? university.programs.join(', ') : university.programs,
-        last_updated: university.last_updated ? new Date(university.last_updated).toLocaleString() : 'N/A',
-        created_at: university.created_at ? new Date(university.created_at).toLocaleString() : 'N/A'
-      };
-    });
-
-    setTableData(initialData);
-
-    // Then fetch columns and their data
-    const token = localStorage.getItem('token');
-    if (!token) throw new Error('Authentication token not found');
-
-    const columnsResponse = await fetch(`${API_URL}/api/columns`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-
-    if (!columnsResponse.ok) throw new Error('Failed to fetch columns');
-    
-    const storedColumns = await columnsResponse.json();
-    const customColumns = storedColumns.map((col: { id: string; name: string }) => ({
-      id: col.id,
-      title: col.name
-    }));
-
-    // Set columns first
-    setColumns(prev => {
-      const defaultColumns = prev.filter(col => 
-        ['url', 'programs', 'last_updated'].includes(col.id)
-      );
-      return [...defaultColumns, ...customColumns];
-    });
-
-    // Then fetch column data with the correct IDs
-    const universityIds = initialData.map(row => row.id);
-    const dataResponse = await fetch(`${API_URL}/api/columns/data/batch`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        university_ids: universityIds
-      })
-    });
-
-    if (!dataResponse.ok) throw new Error('Failed to fetch column data');
-
-    const columnData = await dataResponse.json() as ColumnDataResponse;
-    
-    // Update table data with column values
-    setTableData(initialData.map(row => {
-      const universityColumnData = columnData[row.id] || {};
-      const updatedRow = { ...row } as TableRowData;
-      
-      Object.entries(universityColumnData).forEach(([columnId, data]) => {
-        if (data && typeof data === 'object' && 'value' in data) {
-          updatedRow[columnId] = data.value;
-        }
-      });
-      
-      return updatedRow;
-    }));
-
-  } catch (error) {
-    console.error('Error loading data:', error);
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: "Failed to load data"
-    });
-  } finally {
-    setLoading(false);
-  }
-};
-
   const addColumn = async () => {
-  if (!newColumn.trim()) return;
-  
-  setLoading(true);
-  
-  try {
-    const token = localStorage.getItem('token');
-    if (!token) throw new Error('Not authenticated');
-
-    // First create the column
-    const createResponse = await fetch(`${API_URL}/api/columns`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        name: newColumn.trim(),
-        type: 'text'
-      })
-    });
-
-    if (!createResponse.ok) {
-      const error = await createResponse.json();
-      throw new Error(error.error || 'Failed to create column');
-    }
-
-    const result = await createResponse.json();
-    if (!result.success || !result.column) {
-      throw new Error('Invalid response from server');
-    }
-
-    // Add the new column to columns state
-    const columnId = result.column.id;
-    const columnTitle = result.column.name;
+    if (!newColumn.trim()) return;
     
-    setColumns(prev => [...prev, { id: columnId, title: columnTitle }]);
+    setLoading(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('Not authenticated');
 
-    // For each university, get RAG response and save it
-    for (const row of tableData) {
-      try {
-        // Query RAG for this university
-        const ragResponse = await fetch(`${API_URL}/api/rag`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            question: `What is the ${newColumn.trim()} for this university program?`,
-            university_id: row.id
-          })
-        });
+      const createResponse = await fetch(`${API_URL}/api/columns`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: newColumn.trim(),
+          type: 'text'
+        })
+      });
 
-        if (!ragResponse.ok) {
-          throw new Error('Failed to get RAG response');
-        }
-
-        const ragResult = await ragResponse.json();
-        const value = ragResult.answer || 'No information available';
-
-        // Save the RAG response to the database
-        await fetch(`${API_URL}/api/columns/data`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            university_id: row.id,
-            column_id: columnId,
-            value: value
-          })
-        });
-
-        // Update local state
-        setTableData(current =>
-          current.map(item =>
-            item.id === row.id
-              ? { ...item, [columnId]: value }
-              : item
-          )
-        );
-      } catch (err) {
-        console.error(`Error processing data for ${row.url}:`, err);
+      if (!createResponse.ok) {
+        const error = await createResponse.json();
+        throw new Error(error.error || 'Failed to create column');
       }
+
+      const result = await createResponse.json();
+      if (!result.success || !result.column) {
+        throw new Error('Invalid response from server');
+      }
+
+      const columnId = result.column.id;
+      const columnTitle = result.column.name;
+      
+      setColumns(prev => [...prev, { 
+        id: columnId, 
+        title: columnTitle,
+        created_by: user?.email
+      }]);
+
+      for (const row of tableData) {
+        try {
+          const ragResponse = await fetch(`${API_URL}/api/rag`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              question: `What is the ${newColumn.trim()} for this university program?`,
+              university_id: row.id
+            })
+          });
+
+          if (!ragResponse.ok) {
+            throw new Error('Failed to get RAG response');
+          }
+
+          const ragResult = await ragResponse.json();
+          const value = ragResult.answer || 'No information available';
+
+          await fetch(`${API_URL}/api/columns/data`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              university_id: row.id,
+              column_id: columnId,
+              value: value
+            })
+          });
+
+          setTableData(current =>
+            current.map(item =>
+              item.id === row.id
+                ? { ...item, [columnId]: value }
+                : item
+            )
+          );
+        } catch (err) {
+          console.error(`Error processing data for ${row.url}:`, err);
+        }
+      }
+
+      setNewColumn('');
+      toast({
+        title: "Success",
+        description: "New column added successfully"
+      });
+
+    } catch (err: any) {
+      console.error('Failed to add column:', err);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.message || "Failed to add new column"
+      });
+    } finally {
+      setLoading(false);
     }
-
-    setNewColumn('');
-    toast({
-      title: "Success",
-      description: "New column added successfully"
-    });
-
-  } catch (err: any) {
-    console.error('Failed to add column:', err);
-    toast({
-      variant: "destructive",
-      title: "Error",
-      description: err.message || "Failed to add new column"
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleCellEdit = (rowId: string, columnId: string, value: string) => {
     setEditingCell({ rowId, columnId });
@@ -341,7 +356,49 @@ export function NotionTable({
     }
   };
 
+  const handleDeleteColumn = async (columnId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_URL}/api/columns/${columnId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
 
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete column');
+      }
+
+      setColumns(prev => prev.filter(col => col.id !== columnId));
+      setTableData(prev => prev.map(row => {
+        const newRow = { ...row };
+        delete newRow[columnId];
+        return newRow;
+      }));
+
+      toast({
+        title: "Success",
+        description: "Column deleted successfully"
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.message || "Failed to delete column"
+      });
+    } finally {
+      setDeletingColumn(null);
+    }
+  };
+
+  const canDeleteColumn = (column: Column) => {
+    if (user?.is_admin) return true;
+    if (['url', 'programs', 'last_updated'].includes(column.id)) return false;
+    if (column.is_global) return false;
+    return column.created_by === user?.email;
+  };
 
   if (error) {
     return (
@@ -382,7 +439,19 @@ export function NotionTable({
               <TableRow>
                 {columns.map((column) => (
                   <TableHead key={column.id} className="whitespace-nowrap">
-                    {column.title}
+                    <div className="flex items-center justify-between">
+                      {column.title}
+                      {canDeleteColumn(column) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeletingColumn(column.id)}
+                          className="ml-2 text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </TableHead>
                 ))}
                 <TableHead key="actions">Actions</TableHead>
@@ -419,32 +488,54 @@ export function NotionTable({
                     </TableCell>
                   ))}
                   <TableCell key={`actions-${row.id}`}>
-                    {isPremium && onRemoveUniversity && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          const university = universities.find(u => u.id === row.id);
-                          if (university) onRemoveUniversity(university);
-                        }}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                      {isPremium && onRemoveUniversity && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const university = universities.find(u => u.id === row.id);
+                            if (university) onRemoveUniversity(university);
+                          }}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
+        
+        {loading && (
+          <div className="flex justify-center items-center p-4">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        )}
+  
+        {/* Delete Column Dialog */}
+        <AlertDialog open={!!deletingColumn} onOpenChange={() => setDeletingColumn(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Column</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this column? This action cannot be undone
+                and will remove all associated data.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deletingColumn && handleDeleteColumn(deletingColumn)}
+                className="bg-red-500 hover:bg-red-600"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
-      
-      {loading && (
-        <div className="flex justify-center items-center p-4">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
-      )}
-    </div>
-  );
-}
+    );
+  }
