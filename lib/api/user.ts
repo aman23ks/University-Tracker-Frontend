@@ -2,7 +2,7 @@ import { fetchAPI } from '@/lib/utils/api'
 
 export interface UserSubscription {
   status: string
-  expiry: string
+  expiry: string | null;
   paymentHistory?: Array<{
     payment_id: string
     amount: number
@@ -11,16 +11,16 @@ export interface UserSubscription {
 }
 
 export interface User {
-  id: string
-  email: string
-  name?: string
-  is_premium: boolean
-  is_admin: boolean
-  selected_universities: string[]
-  subscription?: UserSubscription
-  preferences: Record<string, any>
-  created_at: string
-  last_login_at: string
+  id: string;
+  email: string;
+  name?: string;
+  is_premium: boolean;
+  is_admin: boolean;
+  selected_universities: string[];
+  subscription?: UserSubscription;  // Made optional
+  preferences?: Record<string, any>;
+  created_at: string;
+  last_login_at: string;
 }
 
 export interface UserProfile extends User {

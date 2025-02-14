@@ -9,20 +9,38 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/components/ui/use-toast'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Crown, Check, Loader2 } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 export default function UserDashboard() {
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const { toast } = useToast()
   const [selectedUniversities, setSelectedUniversities] = useState<University[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showUpgrade, setShowUpgrade] = useState(false)
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false)
+  const [processingPayment, setProcessingPayment] = useState(false)
 
   useEffect(() => {
     if (user) {
       fetchUniversityDetails()
+      setShowUpgrade(!user.is_premium)
     }
     setLoading(false)
   }, [user])
@@ -54,7 +72,7 @@ export default function UserDashboard() {
 
       const universities: University[] = await response.json()
       setSelectedUniversities(universities)
-      setShowUpgrade(!user.is_premium && universities.length >= 2)
+      // setShowUpgrade(!user.is_premium && universities.length >= 2)
       setError(null)
 
     } catch (error: any) {
@@ -67,6 +85,92 @@ export default function UserDashboard() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleUpgrade = async () => {
+    try {
+      setProcessingPayment(true)
+      const token = localStorage.getItem('token')
+      
+      // Create order
+      const orderRes = await fetch(`${API_URL}/api/subscription/create-order`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (!orderRes.ok) throw new Error('Failed to create order')
+      const orderData = await orderRes.json()
+
+      // Initialize Razorpay
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "UniTracker",
+        description: "Premium Subscription",
+        order_id: orderData.id,
+        handler: async function(response: any) {
+          try {
+            // Verify payment
+            const verifyRes = await fetch(`${API_URL}/api/subscription/verify`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                payment_id: response.razorpay_payment_id,
+                order_id: response.razorpay_order_id,
+                signature: response.razorpay_signature
+              })
+            })
+
+            if (!verifyRes.ok) throw new Error('Payment verification failed')
+            
+            // Update user context
+            updateUser({ 
+              ...user, 
+              is_premium: true,
+              subscription: {
+                status: 'active',
+                expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+              }
+            })
+            
+            setShowPaymentDialog(false)
+            toast({
+              title: "Success",
+              description: "Welcome to Premium! Enjoy unlimited access."
+            })
+          } catch (error: any) {
+            toast({
+              variant: "destructive",
+              title: "Error",
+              description: error.message || "Payment verification failed"
+            })
+          }
+        },
+        prefill: {
+          email: user?.email
+        },
+        theme: {
+          color: "#4F46E5"
+        }
+      }
+
+      const razorpay = new window.Razorpay(options)
+      razorpay.open()
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to process payment"
+      })
+    } finally {
+      setProcessingPayment(false)
     }
   }
 
@@ -94,20 +198,20 @@ export default function UserDashboard() {
         throw new Error(responseData.error || 'Failed to add university')
       }
 
-      // Update the universities list with the new data including column data
+      // Update the universities list
       setSelectedUniversities(prev => [...prev, {
         ...university,
         ...responseData.columnData
       }])
 
-      // Update user context if needed
+      // Update user context
       if (user?.selected_universities) {
         user.selected_universities = [...user.selected_universities, university.url]
       }
 
     } catch (error: any) {
       console.error('[Dashboard] Error adding university:', error)
-      throw error // Propagate error to UniversitySearch component
+      throw error
     }
   }
 
@@ -197,14 +301,68 @@ export default function UserDashboard() {
           <Button
             variant="default"
             className="mt-3"
-            onClick={() => {
-              // Implement upgrade flow
-            }}
+            onClick={() => setShowPaymentDialog(true)}
           >
-            Upgrade for ₹20/month
+            Upgrade for ₹1000/month
           </Button>
         </Alert>
       )}
+
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Crown className="h-5 w-5 text-yellow-500" />
+              Upgrade to Premium
+            </DialogTitle>
+            <DialogDescription>
+              Get unlimited access to all features
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              {[
+                'Unlimited university selections',
+                'Export data to Excel',
+                'Custom data fields',
+                'Priority support',
+                'Advanced analytics'
+              ].map((feature) => (
+                <div key={feature} className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>{feature}</span>
+                </div>
+              )
+            )}
+            </div>
+
+            <div className="text-center space-y-2">
+              <p className="text-2xl font-bold">₹1000/month</p>
+              <p className="text-sm text-muted-foreground">
+                Cancel anytime. No questions asked.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              className="w-full"
+              onClick={handleUpgrade}
+              disabled={processingPayment}
+            >
+              {processingPayment ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                'Upgrade Now'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
