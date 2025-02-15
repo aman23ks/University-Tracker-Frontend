@@ -63,12 +63,13 @@ interface NotionTableProps {
 }
 
 interface TableRowData {
-  id: string
-  url: string
-  programs: string
-  last_updated?: string
-  created_at?: string
-  [key: string]: any
+  id: string;
+  url: string;
+  programs: string;
+  last_updated?: string;
+  created_at?: string;
+  pending_columns?: PendingColumnUpdate[];
+  [key: string]: any;
 }
 
 interface StoredColumnData {
@@ -87,6 +88,12 @@ interface Column {
   title: string
   is_global?: boolean
   created_by?: string
+}
+
+interface PendingColumnUpdate {
+  columnId: string;
+  columnTitle: string;
+  createdAt: string;
 }
 
 export function NotionTable({ 
@@ -108,6 +115,7 @@ export function NotionTable({
   const [editingCell, setEditingCell] = useState<{rowId: string, columnId: string} | null>(null)
   const [editValue, setEditValue] = useState('')
   const [deletingColumn, setDeletingColumn] = useState<string | null>(null)
+  const [pendingUpdates, setPendingUpdates] = useState<{[key: string]: PendingColumnUpdate[]}>({});
   const { toast } = useToast()
 
   const shouldLimitUniversities = useCallback(() => {
@@ -158,11 +166,19 @@ export function NotionTable({
         };
       });
 
-      if (!isPremium && user?.subscription?.status === 'expired') {
-        initialData = initialData.slice(0, 3);
-      }
+      const isExpired = user?.subscription?.status === 'expired';
+      const visibleData = isExpired ? initialData.slice(0, 3) : initialData;
+      const hiddenData = isExpired ? initialData.slice(3) : [];
 
-      setTableData(initialData);
+      // Store hidden universities' IDs for tracking
+      const hiddenIds = hiddenData.map(uni => uni.id);
+
+      setTableData(visibleData);
+
+      if (isPremium && !isExpired && Object.keys(pendingUpdates).length > 0) {
+        await processPendingUpdates();
+      }
+      // setTableData(initialData);
 
       const token = localStorage.getItem('token');
       if (!token) throw new Error('Authentication token not found');
@@ -229,6 +245,50 @@ export function NotionTable({
     }
   };
 
+  const processPendingUpdates = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+  
+    try {
+      for (const universityId of Object.keys(pendingUpdates)) {
+        for (const update of pendingUpdates[universityId]) {
+          // Process RAG for each pending column
+          const ragResponse = await fetch(`${API_URL}/api/rag`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              question: `What is the ${update.columnTitle} for this university program?`,
+              university_id: universityId
+            })
+          });
+  
+          if (ragResponse.ok) {
+            const ragResult = await ragResponse.json();
+            await fetch(`${API_URL}/api/columns/data`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                university_id: universityId,
+                column_id: update.columnId,
+                value: ragResult.answer || 'No information available'
+              })
+            });
+          }
+        }
+      }
+      // Clear pending updates after processing
+      setPendingUpdates({});
+    } catch (error) {
+      console.error('Error processing pending updates:', error);
+    }
+  };
+
   const addColumn = async () => {
     if (!newColumn.trim()) return;
     
@@ -237,7 +297,7 @@ export function NotionTable({
     try {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('Not authenticated');
-
+  
       const createResponse = await fetch(`${API_URL}/api/columns`, {
         method: 'POST',
         headers: {
@@ -249,78 +309,54 @@ export function NotionTable({
           type: 'text'
         })
       });
-
+  
       if (!createResponse.ok) {
         const error = await createResponse.json();
         throw new Error(error.error || 'Failed to create column');
       }
-
+  
       const result = await createResponse.json();
-      if (!result.success || !result.column) {
-        throw new Error('Invalid response from server');
-      }
-
       const columnId = result.column.id;
       const columnTitle = result.column.name;
-      
+  
       setColumns(prev => [...prev, { 
         id: columnId, 
         title: columnTitle,
         created_by: user?.email
       }]);
-
-      for (const row of tableData) {
-        try {
-          const ragResponse = await fetch(`${API_URL}/api/rag`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              question: `What is the ${newColumn.trim()} for this university program?`,
-              university_id: row.id
-            })
-          });
-
-          if (!ragResponse.ok) {
-            throw new Error('Failed to get RAG response');
-          }
-
-          const ragResult = await ragResponse.json();
-          const value = ragResult.answer || 'No information available';
-
-          await fetch(`${API_URL}/api/columns/data`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              university_id: row.id,
-              column_id: columnId,
-              value: value
-            })
-          });
-
-          setTableData(current =>
-            current.map(item =>
-              item.id === row.id
-                ? { ...item, [columnId]: value }
-                : item
-            )
-          );
-        } catch (err) {
-          console.error(`Error processing data for ${row.url}:`, err);
-        }
+  
+      // Only process visible universities if subscription is expired
+      const isExpired = user?.subscription?.status === 'expired';
+      const visibleUniversities = isExpired ? tableData.slice(0, 3) : tableData;
+      const hiddenUniversities = isExpired ? tableData.slice(3) : [];
+  
+      // Process visible universities
+      for (const row of visibleUniversities) {
+        await processColumnForUniversity(row, columnId, columnTitle);
       }
-
+  
+      // Store pending updates for hidden universities
+      if (isExpired && hiddenUniversities.length > 0) {
+        const newPendingUpdates = { ...pendingUpdates };
+        for (const uni of hiddenUniversities) {
+          if (!newPendingUpdates[uni.id]) {
+            newPendingUpdates[uni.id] = [];
+          }
+          newPendingUpdates[uni.id].push({
+            columnId,
+            columnTitle,
+            createdAt: new Date().toISOString()
+          });
+        }
+        setPendingUpdates(newPendingUpdates);
+      }
+  
       setNewColumn('');
       toast({
         title: "Success",
         description: "New column added successfully"
       });
-
+  
     } catch (err: any) {
       console.error('Failed to add column:', err);
       toast({
@@ -330,6 +366,51 @@ export function NotionTable({
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const processColumnForUniversity = async (university: TableRowData, columnId: string, columnTitle: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+  
+    try {
+      const ragResponse = await fetch(`${API_URL}/api/rag`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          question: `What is the ${columnTitle} for this university program?`,
+          university_id: university.id
+        })
+      });
+  
+      if (ragResponse.ok) {
+        const ragResult = await ragResponse.json();
+        await fetch(`${API_URL}/api/columns/data`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            university_id: university.id,
+            column_id: columnId,
+            value: ragResult.answer || 'No information available'
+          })
+        });
+  
+        setTableData(current =>
+          current.map(item =>
+            item.id === university.id
+              ? { ...item, [columnId]: ragResult.answer || 'No information available' }
+              : item
+          )
+        );
+      }
+    } catch (error) {
+      console.error(`Error processing data for ${university.url}:`, error);
     }
   };
 
