@@ -4,15 +4,7 @@ export interface User {
     is_premium: boolean
     is_admin: boolean
     selected_universities: string[]
-    subscription?: {
-      status: 'free' | 'active' | 'cancelled' | 'expired'
-      expiry: string | null
-      payment_history?: Array<{
-        payment_id: string
-        amount: number
-        timestamp: string
-      }>
-    }
+    subscription?: Subscription
     preferences?: {
       theme?: 'light' | 'dark' | 'system'
       emailNotifications?: boolean
@@ -22,6 +14,16 @@ export interface User {
     last_login?: string
   }
   
+  export interface Subscription {
+    status: 'free' | 'active' | 'cancelled' | 'expired'
+    expiry: string | null
+    payment_history?: Array<{
+      payment_id: string
+      amount: number
+      timestamp: string
+    }>
+  }
+
   export interface University {
     id: string
     name: string

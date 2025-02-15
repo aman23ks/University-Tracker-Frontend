@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/components/ui/use-toast'
@@ -110,9 +110,29 @@ export function NotionTable({
   const [deletingColumn, setDeletingColumn] = useState<string | null>(null)
   const { toast } = useToast()
 
+  const shouldLimitUniversities = useCallback(() => {
+    if (!user?.subscription) return false;
+    
+    // Check if subscription is expired
+    if (user.subscription.expiry) {
+      const expiryDate = new Date(user.subscription.expiry);
+      const now = new Date();
+      return now > expiryDate || user.subscription.status === 'expired';
+    }
+    
+    return false;
+  }, [user?.subscription]);
+
   useEffect(() => {
     const loadData = async () => {
       if (universities.length > 0) {
+        let data = [...universities];
+        
+        // Limit to first 3 universities if subscription is expired
+        if (shouldLimitUniversities()) {
+          data = data.slice(0, 3);
+        }
+        
         console.log('Universities changed:', universities);
         await loadAllData();
       } else {
@@ -121,13 +141,13 @@ export function NotionTable({
     };
 
     loadData();
-  }, [universities]);
+  }, [universities, shouldLimitUniversities]);
 
   const loadAllData = async () => {
     setLoading(true);
     try {
       // First initialize basic data
-      const initialData: TableRowData[] = universities.map(uni => {
+      let initialData: TableRowData[] = universities.map(uni => {
         const university = uni.university || uni;
         return {
           id: university.id,
@@ -137,6 +157,10 @@ export function NotionTable({
           created_at: university.created_at ? new Date(university.created_at).toLocaleString() : 'N/A'
         };
       });
+
+      if (!isPremium && user?.subscription?.status === 'expired') {
+        initialData = initialData.slice(0, 3);
+      }
 
       setTableData(initialData);
 

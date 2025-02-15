@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { SubscriptionBanner } from '@/components/SubscriptionBanner'
 import { Crown, Check, Loader2 } from 'lucide-react'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
@@ -264,6 +265,7 @@ export default function UserDashboard() {
 
   return (
     <div className="p-6 space-y-6">
+      <SubscriptionBanner />
       <div className="flex flex-col space-y-4">
         <h2 className="text-2xl font-bold">Your Universities</h2>
         <Card>

@@ -1,11 +1,11 @@
-// File: /app/layout.tsx
+// app/layout.tsx
 import "./globals.css"
 import { Inter } from "next/font/google"
 import type { Metadata } from "next"
 import { ClientAuthProvider } from '@/components/ClientAuthProvider'
-// import { SubscriptionProvider } from '@/components/providers/SubscriptionProvider'
-import Script from 'next/script'
 import { ClientSubscriptionProvider } from "@/components/providers/ClientSubscriptionProvider"
+import { SubscriptionChecker } from "@/components/providers/SubscriptionChecker"
+import Script from 'next/script'
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -30,6 +30,7 @@ export default function RootLayout({
       <body className={inter.className} suppressHydrationWarning>
         <ClientAuthProvider>
           <ClientSubscriptionProvider>
+            <SubscriptionChecker />
             {children}
           </ClientSubscriptionProvider>
         </ClientAuthProvider>

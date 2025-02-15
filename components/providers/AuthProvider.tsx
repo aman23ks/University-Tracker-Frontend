@@ -32,6 +32,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth()
   }, [])
 
+  const checkAndUpdateSubscriptionStatus = async (token: string) => {
+    try {
+      const response = await fetch(`${API_URL}/api/subscription/status`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          is_premium: data.is_premium,
+          subscription: data.subscription
+        };
+      }
+    } catch (error) {
+      console.error('Failed to check subscription:', error);
+    }
+    return null;
+  };
+
   const checkAuth = async () => {
     try {
       const token = localStorage.getItem('token')
@@ -77,6 +99,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const { token, user: userData } = await response.json()
+
+      const subscriptionStatus = await checkAndUpdateSubscriptionStatus(token);
+      if (subscriptionStatus) {
+        userData.is_premium = subscriptionStatus.is_premium;
+        userData.subscription = subscriptionStatus.subscription;
+      }
       
       localStorage.setItem('token', token)
       setUser(userData)

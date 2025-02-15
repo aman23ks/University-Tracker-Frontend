@@ -1,11 +1,15 @@
+// lib/context/subscription-context.tsx
+
 "use client"
 
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/components/providers/AuthProvider'
 
 interface SubscriptionContextType {
   isPremium: boolean
   isLoading: boolean
+  subscriptionStatus: 'free' | 'active' | 'cancelled' | 'expired'
   upgradeToPremuim: () => Promise<void>
   cancelSubscription: () => Promise<void>
 }
@@ -17,7 +21,36 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const [isPremium, setIsPremium] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [subscriptionStatus, setSubscriptionStatus] = useState<'free' | 'active' | 'cancelled' | 'expired'>('free')
   const { toast } = useToast()
+  const { user } = useAuth()
+
+  const checkSubscriptionStatus = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) return
+
+      const response = await fetch(`${API_URL}/api/subscription/status`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setIsPremium(data.is_premium)
+        setSubscriptionStatus(data.subscription?.status || 'free')
+      }
+    } catch (error) {
+      console.error('Failed to check subscription status:', error)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (user) {
+      checkSubscriptionStatus()
+    }
+  }, [user, checkSubscriptionStatus])
 
   const upgradeToPremuim = useCallback(async () => {
     setIsLoading(true)
@@ -34,7 +67,6 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       if (!response.ok) throw new Error('Failed to create order')
       const orderData = await response.json()
 
-      // Initialize Razorpay
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: orderData.amount,
@@ -59,6 +91,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
             if (!verifyRes.ok) throw new Error('Payment verification failed')
             setIsPremium(true)
+            setSubscriptionStatus('active')
+            await checkSubscriptionStatus()
+            
             toast({
               title: 'Success',
               description: 'Welcome to Premium! Enjoy unlimited access.',
@@ -84,7 +119,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     } finally {
       setIsLoading(false)
     }
-  }, [toast])
+  }, [toast, checkSubscriptionStatus])
 
   const cancelSubscription = useCallback(async () => {
     setIsLoading(true)
@@ -99,7 +134,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
       if (!response.ok) throw new Error('Failed to cancel subscription')
       
-      setIsPremium(false)
+      setSubscriptionStatus('cancelled')
       toast({
         title: 'Subscription Cancelled',
         description: 'Your premium access will end at the end of the billing period.',
@@ -120,6 +155,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       value={{
         isPremium,
         isLoading,
+        subscriptionStatus,
         upgradeToPremuim,
         cancelSubscription
       }}

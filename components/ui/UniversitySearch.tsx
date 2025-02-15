@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -36,6 +36,20 @@ export function UniversitySearch({
   const { toast } = useToast()
   const { user } = useAuth()
 
+  const checkSubscriptionStatus = useCallback(() => {
+    if (!user?.subscription) return true;
+    
+    if (user.subscription.expiry) {
+      const expiryDate = new Date(user.subscription.expiry);
+      const now = new Date();
+      if (now > expiryDate || user.subscription.status === 'expired') {
+        return selectedUniversities.length < 3;
+      }
+    }
+    
+    return isPremium || selectedUniversities.length < 3;
+  }, [user?.subscription, isPremium, selectedUniversities.length]);
+
   useEffect(() => {
     fetchUniversities()
   }, [])
@@ -64,7 +78,7 @@ export function UniversitySearch({
     }
   }
 
-  const isSelectionDisabled = !isPremium && selectedUniversities.length >= 3
+  const isSelectionDisabled = !checkSubscriptionStatus()
 
   const filteredUniversities = universities.filter(uni => {
     const searchLower = search.toLowerCase()
@@ -76,6 +90,15 @@ export function UniversitySearch({
     if (addingUniversity) {
       console.log('[Frontend] Already processing a request, skipping')
       return
+    }
+
+    if (!checkSubscriptionStatus()) {
+      toast({
+        variant: "destructive",
+        title: "Subscription Required",
+        description: "Your subscription has expired. Please upgrade to add more universities."
+      });
+      return;
     }
 
     try {
@@ -93,7 +116,6 @@ export function UniversitySearch({
         return
       }
 
-      // Call parent's onSelect with the university and wait for it to complete
       await onSelect(university)
       
       toast({
@@ -101,7 +123,6 @@ export function UniversitySearch({
         description: "University added successfully"
       })
 
-      // Close the popover and reset search
       setOpen(false)
       setSearch('')
 
@@ -185,7 +206,11 @@ export function UniversitySearch({
         </PopoverContent>
       </Popover>
 
-      {isSelectionDisabled && (
+      {isSelectionDisabled && user?.subscription?.status === 'expired' ? (
+        <p className="mt-2 text-sm text-red-500">
+          Your subscription has expired. Only the first 3 universities are accessible.
+        </p>
+      ) : isSelectionDisabled && (
         <p className="mt-2 text-sm text-red-500">
           Free tier limit reached. Upgrade to Premium for unlimited selections.
         </p>
