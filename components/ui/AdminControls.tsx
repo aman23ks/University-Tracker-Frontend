@@ -1,5 +1,3 @@
-"use client"
-
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,14 +5,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Plus } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
-
 interface AdminControlsProps {
-  onAddUniversity: (data: { url: string; program: string }) => Promise<boolean>
+  onAddUniversity: (data: { url: string; name: string; program: string }) => Promise<boolean>
 }
 
 export function AdminControls({ onAddUniversity }: AdminControlsProps) {
   const [url, setUrl] = useState('')
+  const [name, setName] = useState('')
   const [program, setProgram] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -28,7 +25,7 @@ export function AdminControls({ onAddUniversity }: AdminControlsProps) {
 
     try {
       // Validate input
-      if (!url.trim() || !program.trim()) {
+      if (!url.trim() || !program.trim() || !name.trim()) {
         throw new Error('Please fill in all fields')
       }
 
@@ -39,10 +36,16 @@ export function AdminControls({ onAddUniversity }: AdminControlsProps) {
         throw new Error('Please enter a valid URL')
       }
 
-      const result = await onAddUniversity({ url: url.trim(), program: program.trim() })
+      const result = await onAddUniversity({ 
+        url: url.trim(), 
+        name: name.trim(),
+        program: program.trim() 
+      })
+      
       if (result) {
         setSuccess(true)
         setUrl('')
+        setName('')
         setProgram('')
       } else {
         throw new Error('Failed to add university')
@@ -62,6 +65,15 @@ export function AdminControls({ onAddUniversity }: AdminControlsProps) {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
+            <Input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="University Name"
+              required
+              disabled={loading}
+              className="w-full"
+            />
             <Input
               type="url"
               value={url}

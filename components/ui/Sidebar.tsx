@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/components/providers/AuthProvider'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import {
-  Home,
+import { 
+  Home, 
   Search,
   Settings,
   LogOut,
@@ -15,13 +15,14 @@ import {
   Crown,
   Users,
   Database,
-  BarChart
+  BarChart,
+  Building
 } from 'lucide-react'
 
 export function Sidebar() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
-
+  
   const adminRoutes = [
     {
       href: '/dashboard/admin',
@@ -33,23 +34,23 @@ export function Sidebar() {
       label: 'Universities',
       icon: Database
     },
-    {
-      href: '/dashboard/admin/users',
-      label: 'Users',
-      icon: Users
-    },
+    // {
+    //   href: '/dashboard/admin/users',
+    //   label: 'Users',
+    //   icon: Users
+    // },
     {
       href: '/dashboard/admin/analytics',
       label: 'Analytics',
       icon: BarChart
     },
-    {
-      href: '/dashboard/admin/settings',
-      label: 'Settings',
-      icon: Settings
-    }
+    // {
+    //   href: '/dashboard/admin/settings',
+    //   label: 'Settings',
+    //   icon: Settings
+    // }
   ]
-
+  
   const userRoutes = [
     {
       href: '/dashboard/user',
@@ -59,29 +60,39 @@ export function Sidebar() {
     {
       href: '/dashboard/user/universities',
       label: 'Universities',
-      icon: Table
+      icon: Building
     },
-    {
-      href: '/dashboard/user/search',
-      label: 'Search',
-      icon: Search
-    },
+    // {
+    //   href: '/dashboard/user/search',
+    //   label: 'Search',
+    //   icon: Search
+    // },
     {
       href: '/dashboard/user/profile',
       label: 'Profile',
       icon: User
-    }
+    },
+    // {
+    //   href: '/dashboard/user/settings',
+    //   label: 'Settings',
+    //   icon: Settings
+    // }
   ]
-
+  
   const routes = user?.is_admin ? adminRoutes : userRoutes
-
+  
   return (
     <div className="flex h-screen flex-col bg-gray-900 w-64">
       <div className="p-6">
-        <Link href={user?.is_admin ? '/dashboard/admin' : '/dashboard/user'} className="flex items-center gap-2 text-white mb-8">
+        <Link 
+          href={user?.is_admin ? '/dashboard/admin' : '/dashboard/user'} 
+          className="flex items-center gap-2 text-white mb-8"
+        >
           <Table className="h-8 w-8" />
           <span className="text-xl font-bold">UniTracker</span>
-          {user?.is_admin && <span className="text-xs bg-blue-500 px-2 py-1 rounded">Admin</span>}
+          {user?.is_admin && (
+            <span className="text-xs bg-blue-500 px-2 py-1 rounded">Admin</span>
+          )}
         </Link>
         
         <nav className="space-y-2">

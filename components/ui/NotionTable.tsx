@@ -28,16 +28,6 @@ import { useAuth } from '@/components/providers/AuthProvider'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
-interface ApiResponse {
-  success: boolean
-  column?: {
-    id: string
-    name: string
-    type: string
-  }
-  error?: string
-}
-
 export interface University {
   id: string
   url: string
@@ -45,9 +35,11 @@ export interface University {
   last_updated?: string
   created_at?: string
   metadata?: Record<string, any>
+  name: string
   university?: {
     id: string
     url: string
+    name: string
     programs: string[] | string
     last_updated?: string
     created_at?: string
@@ -65,6 +57,7 @@ interface NotionTableProps {
 interface TableRowData {
   id: string;
   url: string;
+  name: string;
   programs: string;
   last_updated?: string;
   created_at?: string;
@@ -105,6 +98,7 @@ export function NotionTable({
   const { user } = useAuth()
   const [tableData, setTableData] = useState<TableRowData[]>([])
   const [columns, setColumns] = useState<Column[]>([
+    {id: 'name', title: 'University Name', is_global: true},
     { id: 'url', title: 'URL', is_global: true },
     { id: 'programs', title: 'Programs', is_global: true },
     { id: 'last_updated', title: 'Last Updated', is_global: true }
@@ -159,6 +153,7 @@ export function NotionTable({
         const university = uni.university || uni;
         return {
           id: university.id,
+          name: university.name,
           url: university.url,
           programs: Array.isArray(university.programs) ? university.programs.join(', ') : university.programs,
           last_updated: university.last_updated ? new Date(university.last_updated).toLocaleString() : 'N/A',
@@ -199,7 +194,7 @@ export function NotionTable({
 
       setColumns(prev => {
         const defaultColumns = prev.filter(col => 
-          ['url', 'programs', 'last_updated'].includes(col.id)
+          ['name', 'url', 'programs', 'last_updated'].includes(col.id)
         );
         return [...defaultColumns, ...customColumns];
       });
