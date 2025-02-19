@@ -12,6 +12,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 interface University {
   id: string
+  name: string
   url: string
   programs: string[]
 }

@@ -26,7 +26,7 @@ export function UniversityCard({
   onSelect
 }: UniversityCardProps) {
   const { user } = useAuth()
-  const isPremium = user?.isPremium || false
+  const isPremium = user?.is_premium || false
 
   return (
     <Card className="h-full">
