@@ -88,13 +88,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("-----before login-------")
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Origin': window.location.origin
         },
         body: JSON.stringify({ email, password })
       })
       console.log("--------response-------")
-      console.log(response)
+      console.log(response.json())
 
       if (!response.ok) {
         const data = await response.json()
