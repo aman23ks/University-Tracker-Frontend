@@ -85,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string): Promise<User | null> => {
     try {
+      console.log("-----before login-------")
       const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
@@ -92,6 +93,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
         body: JSON.stringify({ email, password })
       })
+      console.log("--------response-------")
+      console.log(response)
 
       if (!response.ok) {
         const data = await response.json()
