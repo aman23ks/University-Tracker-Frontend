@@ -111,7 +111,7 @@ export default function Home() {
             {[
               {
                 title: "Free",
-                price: "$0",
+                price: "₹0",
                 description: "Perfect for getting started",
                 features: [
                   "Compare 3 universities",
