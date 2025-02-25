@@ -16,6 +16,7 @@ interface UniversityDetails {
   id: string
   name: string
   url: string
+  status: string
   programs: string[]
   lastUpdated: string
   data: Record<string, any>
@@ -66,6 +67,7 @@ export default function UniversityDetailsPage() {
     id: university.id,
     name: university.name,
     url: university.url,
+    status: university.status,
     programs: university.programs,
     lastUpdated: university.lastUpdated
   }
