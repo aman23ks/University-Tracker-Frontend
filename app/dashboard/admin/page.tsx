@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from '@/components/ui/button'
+import { useUniversityStatus } from '../../../lib/hooks/useUniversityStatus'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -33,7 +34,8 @@ interface User {
 }
 
 interface FormData {
-  url: string
+  url: string,
+  name: string,
   program: string
 }
 
@@ -44,6 +46,7 @@ export default function AdminDashboard() {
   const [universities, setUniversities] = useState<University[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const { addProcessingUniversity } = useUniversityStatus()
 
   useEffect(() => {
     if (!user) {
@@ -115,6 +118,14 @@ export default function AdminDashboard() {
       }
 
       const newUni = await response.json()
+
+      addProcessingUniversity({
+        id: newUni.university.id,
+        name: newUni.university.name,
+        url: newUni.university.url,
+        // status: 'processing'
+      })
+
       setUniversities(prev => [...prev, newUni])
       
       toast({
