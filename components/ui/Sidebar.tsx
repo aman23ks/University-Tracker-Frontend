@@ -16,7 +16,8 @@ import {
   Users,
   Database,
   BarChart,
-  Building
+  Building,
+  MessageCircle
 } from 'lucide-react'
 
 export function Sidebar() {
@@ -44,6 +45,11 @@ export function Sidebar() {
       label: 'Analytics',
       icon: BarChart
     },
+    {
+      href: '/dashboard/admin/feedback',
+      label: 'Feedback',
+      icon: MessageCircle
+    }
     // {
     //   href: '/dashboard/admin/settings',
     //   label: 'Settings',
@@ -67,6 +73,11 @@ export function Sidebar() {
     //   label: 'Search',
     //   icon: Search
     // },
+    {
+      href: '/dashboard/user/feedback',
+      label: 'Feedback & Support',
+      icon: MessageCircle
+    },
     {
       href: '/dashboard/user/profile',
       label: 'Profile',
