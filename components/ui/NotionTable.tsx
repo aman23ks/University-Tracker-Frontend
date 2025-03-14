@@ -80,6 +80,7 @@ interface NotionTableProps {
   isPremium: boolean
   loading?: boolean
   processingUniversities?: Set<string>
+  adminActions?: (university: University) => React.ReactNode
 }
 
 interface TableRowData {

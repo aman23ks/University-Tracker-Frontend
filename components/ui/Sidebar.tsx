@@ -17,7 +17,9 @@ import {
   Database,
   BarChart,
   Building,
-  MessageCircle
+  MessageCircle,
+  Link as LinkIcon,
+  Upload
 } from 'lucide-react'
 
 export function Sidebar() {
@@ -34,6 +36,11 @@ export function Sidebar() {
       href: '/dashboard/admin/universities',
       label: 'Universities',
       icon: Database
+    },
+    {
+      href: '/dashboard/admin/url-processor',
+      label: 'URL Processor',
+      icon: Upload
     },
     // {
     //   href: '/dashboard/admin/users',
