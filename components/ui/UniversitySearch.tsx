@@ -85,7 +85,10 @@ export function UniversitySearch({
   const filteredUniversities = universities.filter(uni => {
     const searchLower = search.toLowerCase()
     const isNotSelected = !selectedUniversities.includes(uni.url)
-    return isNotSelected && uni.url.toLowerCase().includes(searchLower)
+    return isNotSelected && (
+      uni.name.toLowerCase().includes(searchLower) || 
+      uni.url.toLowerCase().includes(searchLower)
+    )
   })
 
   const handleSelect = async (university: University) => {
@@ -164,7 +167,7 @@ export function UniversitySearch({
               <span className="text-sm text-muted-foreground">
                 {selectedUniversities.length > 0 
                   ? `${selectedUniversities.length} universities selected`
-                  : 'Search universities...'}
+                  : 'Search universities by name...'}
               </span>
             </div>
           </Button>
@@ -172,7 +175,7 @@ export function UniversitySearch({
         <PopoverContent className="w-[400px] p-4" align="start">
           <div className="space-y-4">
             <Input
-              placeholder="Search by URL..."
+              placeholder="Search by university name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="h-9"
@@ -197,7 +200,10 @@ export function UniversitySearch({
                         onClick={() => handleSelect(uni)}
                         disabled={addingUniversity}
                       >
-                        {uni.url}
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">{uni.name}</span>
+                          <span className="text-xs text-muted-foreground">{uni.url}</span>
+                        </div>
                       </Button>
                     ))}
                   </div>
