@@ -64,7 +64,7 @@ export function MobileNav() {
             className="flex items-center"
             onClick={() => setOpen(false)}
           >
-            <span className="font-bold">UniTracker</span>
+            <span className="font-bold">Admit Bridge</span>
           </Link>
         </div>
         <div className="my-4 h-[calc(100vh-8rem)] pb-10 pl-6">

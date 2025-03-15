@@ -107,7 +107,7 @@ export function Sidebar() {
           className="flex items-center gap-2 text-white mb-8"
         >
           <Table className="h-8 w-8" />
-          <span className="text-xl font-bold">UniTracker</span>
+          <span className="text-xl font-bold">Admit Bridge</span>
           {user?.is_admin && (
             <span className="text-xs bg-blue-500 px-2 py-1 rounded">Admin</span>
           )}

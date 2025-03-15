@@ -49,7 +49,7 @@ export function PremiumDialog({ open, onOpenChange }: PremiumDialogProps) {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: orderData.amount,
         currency: orderData.currency,
-        name: 'UniTracker Premium',
+        name: 'Admit Bridge Premium',
         description: 'Premium Subscription',
         order_id: orderData.id,
         handler: async (response: any) => {

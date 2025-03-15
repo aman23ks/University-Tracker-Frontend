@@ -11,7 +11,7 @@ export default function TermsPage() {
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex justify-between h-16 items-center">
             <Link href="/">
-              <span className="text-2xl font-bold text-[#111827] cursor-pointer">University Search</span>
+              <span className="text-2xl font-bold text-[#111827] cursor-pointer">Admit Bridge</span>
             </Link>
             <div className="flex items-center space-x-4">
               <Link href="/">
@@ -32,12 +32,12 @@ export default function TermsPage() {
           <p className="text-gray-500"><strong>Last Updated: March 15, 2025</strong></p>
 
           <h2>1. INTRODUCTION</h2>
-          <p>Welcome to University Search's university research platform (the "Service"). These Terms and Conditions ("Terms") govern your access to and use of the Service. Please read these Terms carefully before using our Service.</p>
+          <p>Welcome to Admit Bridge's university research platform (the "Service"). These Terms and Conditions ("Terms") govern your access to and use of the Service. Please read these Terms carefully before using our Service.</p>
           <p>By accessing or using the Service, you agree to be bound by these Terms. If you disagree with any part of the Terms, you may not access the Service.</p>
 
           <h2>2. DEFINITIONS</h2>
           <ul>
-            <li><strong>"Company"</strong> (referred to as either "the Company", "We", "Us" or "Our" in this Agreement) refers to University Search.</li>
+            <li><strong>"Company"</strong> (referred to as either "the Company", "We", "Us" or "Our" in this Agreement) refers to Admit Bridge.</li>
             <li><strong>"Service"</strong> refers to the university research platform.</li>
             <li><strong>"User"</strong> (referred to as either "Users", "You" or "Your") refers to the individual accessing or using the Service, or the company, or other legal entity on behalf of which such individual is accessing or using the Service.</li>
             <li><strong>"Content"</strong> refers to data, text, information, and other materials that are available through the Service, including university information, admission requirements, and academic program details.</li>
@@ -89,7 +89,7 @@ export default function TermsPage() {
           </ul>
 
           <h3>5.3 Intellectual Property</h3>
-          <p>The Service and its original content, features, and functionality are and will remain the exclusive property of University Search and its licensors. The Service is protected by copyright, trademark, and other laws of both India and foreign countries. Our trademarks and trade dress may not be used in connection with any product or service without the prior written consent of University Search.</p>
+          <p>The Service and its original content, features, and functionality are and will remain the exclusive property of Admit Bridge and its licensors. The Service is protected by copyright, trademark, and other laws of both India and foreign countries. Our trademarks and trade dress may not be used in connection with any product or service without the prior written consent of Admit Bridge.</p>
 
           <h3>5.4 User Content</h3>
           <p>You retain any and all of your rights to any Content you submit, post, or display on or through the Service. By submitting, posting, or displaying Content on or through the Service, you grant us a worldwide, non-exclusive, royalty-free license to use, reproduce, modify, adapt, publish, translate, create derivative works from, distribute, and display such Content.</p>
@@ -99,13 +99,13 @@ export default function TermsPage() {
           <p>Users may customize their view of university data by adding, removing, or editing columns. Any customization is specific to your account and does not alter the data for other users.</p>
 
           <h2>7. LIMITATION OF LIABILITY</h2>
-          <p>To the maximum extent permitted by applicable law, in no event shall University Search, its affiliates, agents, directors, employees, suppliers, or licensors be liable for any indirect, punitive, incidental, special, consequential, or exemplary damages, including without limitation damages for loss of profits, goodwill, use, data, or other intangible losses, arising out of or relating to the use of, or inability to use, the Service.</p>
+          <p>To the maximum extent permitted by applicable law, in no event shall Admit Bridge, its affiliates, agents, directors, employees, suppliers, or licensors be liable for any indirect, punitive, incidental, special, consequential, or exemplary damages, including without limitation damages for loss of profits, goodwill, use, data, or other intangible losses, arising out of or relating to the use of, or inability to use, the Service.</p>
 
           <h2>8. DISCLAIMER</h2>
           <p>The Service is provided on an "AS IS" and "AS AVAILABLE" basis. The Company disclaims all warranties of any kind, whether express or implied, including but not limited to the implied warranties of merchantability, fitness for a particular purpose, and non-infringement. The Company does not warrant that the Service will function uninterrupted, secure, or available at any particular time or location, or that any errors or defects will be corrected.</p>
 
           <h2>9. INDEMNIFICATION</h2>
-          <p>You agree to defend, indemnify, and hold harmless University Search, its affiliates, licensors, and service providers, and its and their respective officers, directors, employees, contractors, agents, licensors, suppliers, successors, and assigns from and against any claims, liabilities, damages, judgments, awards, losses, costs, expenses, or fees (including reasonable attorneys' fees) arising out of or relating to your violation of these Terms or your use of the Service.</p>
+          <p>You agree to defend, indemnify, and hold harmless Admit Bridge, its affiliates, licensors, and service providers, and its and their respective officers, directors, employees, contractors, agents, licensors, suppliers, successors, and assigns from and against any claims, liabilities, damages, judgments, awards, losses, costs, expenses, or fees (including reasonable attorneys' fees) arising out of or relating to your violation of these Terms or your use of the Service.</p>
 
           <h2>10. GOVERNING LAW</h2>
           <p>These Terms shall be governed and construed in accordance with the laws of India, without regard to its conflict of law provisions. Our failure to enforce any right or provision of these Terms will not be considered a waiver of those rights.</p>
@@ -117,12 +117,12 @@ export default function TermsPage() {
           <p>If any provision of these Terms is held to be invalid or unenforceable by a court, the remaining provisions of these Terms will remain in effect.</p>
 
           <h2>13. ENTIRE AGREEMENT</h2>
-          <p>These Terms constitute the entire agreement between you and University Search regarding our Service, and supersede and replace any prior agreements we might have between us regarding the Service.</p>
+          <p>These Terms constitute the entire agreement between you and Admit Bridge regarding our Service, and supersede and replace any prior agreements we might have between us regarding the Service.</p>
 
           <h2>14. CONTACT US</h2>
           <p>If you have any questions about these Terms, please contact us at:</p>
           <ul>
-            <li>Email: legal@universitysearch.com</li>
+            <li>Email: amanshri23ks@gmail.com</li>
           </ul>
         </div>
       </div>
@@ -130,7 +130,7 @@ export default function TermsPage() {
       {/* Minimal Footer */}
       <footer className="py-8 px-4 border-t border-gray-100">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <span className="text-sm text-gray-600">&copy; 2025 University Search</span>
+          <span className="text-sm text-gray-600">&copy; 2025 Admit Bridge</span>
           <div className="flex space-x-6">
             <Link href="/privacy" className="text-sm text-gray-600 hover:text-[#111827]">
               Privacy

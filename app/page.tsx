@@ -10,7 +10,7 @@ export default function Home() {
       <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex justify-between h-16 items-center">
-            <span className="text-2xl font-bold text-[#111827]">University Search</span>
+            <span className="text-2xl font-bold text-[#111827]">Admit Bridge</span>
             <div className="flex items-center space-x-4">
               <Link href="/auth/login">
                 <Button variant="outline" className="hover:bg-gray-50">Sign In</Button>
@@ -196,7 +196,7 @@ export default function Home() {
       {/* Minimal Footer */}
       <footer className="py-8 px-4 border-t border-gray-100">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <span className="text-sm text-gray-600">&copy; 2025 University Search</span>
+          <span className="text-sm text-gray-600">&copy; 2025 Admit Bridge</span>
           <div className="flex space-x-6">
             <Link href="/privacy" className="text-sm text-gray-600 hover:text-[#111827]">
               Privacy

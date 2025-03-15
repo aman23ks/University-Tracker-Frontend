@@ -47,7 +47,7 @@ export function PaymentForm() {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: orderData.amount,
         currency: orderData.currency,
-        name: 'UniTracker',
+        name: 'Admit Bridge',
         description: 'Premium Subscription',
         order_id: orderData.id,
         handler: async function (response: any) {

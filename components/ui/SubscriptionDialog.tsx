@@ -45,7 +45,7 @@ export function SubscriptionDialog({ open, onOpenChange }: SubscriptionDialogPro
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: orderData.amount,
         currency: orderData.currency,
-        name: "UniTracker",
+        name: "Admit Bridge",
         description: "Premium Subscription",
         order_id: orderData.order_id, // Use order_id from response
         prefill: {
