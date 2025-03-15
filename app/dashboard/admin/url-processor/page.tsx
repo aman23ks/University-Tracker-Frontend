@@ -198,56 +198,56 @@ export default function URLProcessorPage() {
                   <RefreshCw className="h-6 w-6 animate-spin" />
                 </div>
               ) : (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Data Count</TableHead>
-                        <TableHead>Last Updated</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {namespaces.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
-                            {errorMessage ? "Backend feature not available" : "No namespaces found"}
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        namespaces.map((namespace) => (
-                          <TableRow key={namespace.id}>
-                            <TableCell className="font-medium">
-                              <div className="flex items-center">
-                                <Database className="h-4 w-4 mr-2 text-muted-foreground" />
-                                <div>
-                                  <div>{namespace.name}</div>
-                                  {namespace.description && (
-                                    <div className="text-xs text-muted-foreground">{namespace.description}</div>
-                                  )}
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>{namespace.stats?.vector_count || 0} vectors</TableCell>
-                            <TableCell>{formatDate(namespace.last_updated)}</TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setDeletingNamespace(namespace.id)}
-                                className="text-red-500 hover:text-red-700"
-                                disabled={namespace.name?.startsWith('uni_')} // Prevent deleting university namespaces
-                              >
-                                <Trash className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
+                <div className="rounded-md border max-h-80 overflow-auto">
+  <Table>
+    <TableHeader className="sticky top-0 bg-background z-10">
+      <TableRow>
+        <TableHead>Name</TableHead>
+        <TableHead>Data Count</TableHead>
+        <TableHead>Last Updated</TableHead>
+        <TableHead></TableHead>
+      </TableRow>
+    </TableHeader>
+    <TableBody>
+      {namespaces.length === 0 ? (
+        <TableRow>
+          <TableCell colSpan={4} className="text-center text-muted-foreground py-6">
+            {errorMessage ? "Backend feature not available" : "No namespaces found"}
+          </TableCell>
+        </TableRow>
+      ) : (
+        namespaces.map((namespace) => (
+          <TableRow key={namespace.id}>
+            <TableCell className="font-medium">
+              <div className="flex items-center">
+                <Database className="h-4 w-4 mr-2 text-muted-foreground" />
+                <div>
+                  <div>{namespace.name}</div>
+                  {namespace.description && (
+                    <div className="text-xs text-muted-foreground">{namespace.description}</div>
+                  )}
                 </div>
+              </div>
+            </TableCell>
+            <TableCell>{namespace.stats?.vector_count || 0} vectors</TableCell>
+            <TableCell>{formatDate(namespace.last_updated)}</TableCell>
+            <TableCell>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setDeletingNamespace(namespace.id)}
+                className="text-red-500 hover:text-red-700"
+                disabled={namespace.name?.startsWith('uni_')} // Prevent deleting university namespaces
+              >
+                <Trash className="h-4 w-4" />
+              </Button>
+            </TableCell>
+          </TableRow>
+        ))
+      )}
+    </TableBody>
+  </Table>
+</div>
               )}
             </CardContent>
           </Card>
