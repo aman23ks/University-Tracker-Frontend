@@ -61,11 +61,11 @@ export default function Home() {
             </div>
             
             {/* Video Player */}
-            <div className="relative rounded-2xl overflow-hidden bg-gray-100 aspect-video shadow-2xl">
+            <div className="relative rounded-2xl overflow-hidden bg-gray-100 shadow-2xl" style={{paddingBottom: "56.25%", height: 0}}>
               <iframe
-                src="https://drive.google.com/file/d/14b7gVmlkvcC_vN7BvzEK1fyY2pkGLqSa/preview"
-                allow="autoplay"
-                className="absolute inset-0 w-full h-full"
+                src="https://www.loom.com/embed/774a107d38784075a19b4d0cd0d7a5c8?sid=2da12c2e-0a12-4a3e-abb1-c7bce9850811"
+                allowFullScreen
+                style={{position: "absolute", top: 0, left: 0, width: "100%", height: "100%"}}
               ></iframe>
             </div>
           </div>
