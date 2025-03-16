@@ -10,7 +10,7 @@ import Script from 'next/script'
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "University Data Platform",
+  title: "Admit Bridge",
   description: "Manage and explore university data",
 }
 
