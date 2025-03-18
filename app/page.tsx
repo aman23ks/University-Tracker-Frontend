@@ -105,7 +105,8 @@ export default function Home() {
       </section>
 
       {/* Pricing */}
-      <section className="py-16 px-4">
+      {/* Subscription: Uncomment this */}
+      {/* <section className="py-16 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="grid md:grid-cols-2 gap-8">
             {[
@@ -178,7 +179,7 @@ export default function Home() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Final CTA */}
       <section className="py-16 px-4 bg-[#111827] text-white">
@@ -197,14 +198,15 @@ export default function Home() {
       <footer className="py-8 px-4 border-t border-gray-100">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
           <span className="text-sm text-gray-600">&copy; 2025 Admit Bridge</span>
-          <div className="flex space-x-6">
+          {/* Subscription: Uncomment this */}
+          {/* <div className="flex space-x-6">
             <Link href="/privacy" className="text-sm text-gray-600 hover:text-[#111827]">
               Privacy
             </Link>
             <Link href="/terms" className="text-sm text-gray-600 hover:text-[#111827]">
               Terms
             </Link>
-          </div>
+          </div> */}
         </div>
       </footer>
     </div>
