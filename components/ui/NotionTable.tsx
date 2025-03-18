@@ -153,7 +153,26 @@ export function NotionTable({
 
 
   // Filter visible universities based on subscription status
+  // const filterVisibleUniversities = useCallback((unis: University[]): University[] => {
+  //   if (!user) return unis;
+    
+  //   const isExpired = user.subscription?.status === 'expired';
+    
+  //   // If subscription is expired, only show first 3 universities
+  //   if (isExpired && !user.is_admin) {
+  //     return unis.slice(0, 3);
+  //   }
+    
+  //   // Otherwise show all universities
+  //   return unis;
+  // }, [user]);
+
+  // Subscription: Uncomment the code above and remove the code below
   const filterVisibleUniversities = useCallback((unis: University[]): University[] => {
+    // Always return all universities
+    return unis;
+    
+    /* Original code commented out for future use
     if (!user) return unis;
     
     const isExpired = user.subscription?.status === 'expired';
@@ -165,7 +184,8 @@ export function NotionTable({
     
     // Otherwise show all universities
     return unis;
-  }, [user]);
+    */
+  }, []);
 
   // Initialize cell states when universities or columns change
   useEffect(() => {
@@ -907,7 +927,7 @@ export function NotionTable({
       </div>
       
       {hasHiddenUniversities && (
-        <Alert className="bg-amber-50 border-amber-200">
+        <Alert className="bg-amber-50 border-amber-200 hidden"> {/*Subscription: Remove the hideen class*/}
           <AlertDescription className="text-amber-800">
             Your subscription has expired. Only showing the first 3 universities. 
             {universities.length - 3} {universities.length - 3 === 1 ? 'university is' : 'universities are'} hidden. 

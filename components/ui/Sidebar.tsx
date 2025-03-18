@@ -134,10 +134,11 @@ export function Sidebar() {
       </div>
 
       <div className="mt-auto p-6">
-        {!user?.is_admin && !user?.is_premium && (
+        {/* Subscription: Remove false && from below */}
+        {false && !user?.is_admin && !user?.is_premium && (
           <Button
             className="w-full mb-4"
-            variant="premium"
+          variant="premium"
             onClick={() => {}}
           >
             <Crown className="h-4 w-4 mr-2" />

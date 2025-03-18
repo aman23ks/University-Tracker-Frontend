@@ -225,8 +225,8 @@ export default function ProfilePage() {
          </Form>
        </CardContent>
      </Card>
-
-     {user?.is_premium && (
+     {/* Subscription: Uncomment the code below */}
+     {/* {user?.is_premium && (
        <Card className="mt-6">
          <CardHeader>
            <CardTitle className="flex items-center gap-2">
@@ -281,9 +281,9 @@ export default function ProfilePage() {
            </div>
          </CardContent>
        </Card>
-     )}
+     )} */}
 
-     <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+     {/* <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
        <DialogContent>
          <DialogHeader>
            <DialogTitle>Cancel Subscription</DialogTitle>
@@ -306,7 +306,7 @@ export default function ProfilePage() {
            </Button>
          </DialogFooter>
        </DialogContent>
-     </Dialog>
+     </Dialog> */}
    </div>
  )
 }
