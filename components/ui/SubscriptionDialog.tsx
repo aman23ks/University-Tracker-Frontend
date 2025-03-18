@@ -151,7 +151,7 @@ export function SubscriptionDialog({ open, onOpenChange }: SubscriptionDialogPro
           <div className="space-y-2">
             {[
               'Unlimited university selections',
-              'Export data to Excel',
+              // 'Export data to Excel',
               'Custom data fields',
               'Priority support',
               'Advanced analytics'

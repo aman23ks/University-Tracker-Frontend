@@ -111,7 +111,7 @@ export function PaymentForm() {
           <p className="font-medium">Plan Details:</p>
           <ul className="list-disc list-inside space-y-1 text-sm">
             <li>Unlimited university selections</li>
-            <li>Export data to Excel</li>
+            {/* <li>Export data to Excel</li> */}
             <li>Custom data fields</li>
             <li>Priority support</li>
           </ul>

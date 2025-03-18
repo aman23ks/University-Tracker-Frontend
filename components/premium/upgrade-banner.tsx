@@ -14,7 +14,7 @@ export function UpgradeBanner({ onUpgrade }: UpgradeBannerProps) {
 
   const features = [
     "Unlimited university selections",
-    "Export data to Excel",
+    // "Export data to Excel",
     "Custom data fields",
     "Priority support",
     "Advanced analytics"

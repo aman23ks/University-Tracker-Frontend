@@ -106,7 +106,7 @@ export function PremiumDialog({ open, onOpenChange }: PremiumDialogProps) {
           <div className="space-y-2">
             {[
               'Unlimited university selections',
-              'Export data to Excel',
+              // 'Export data to Excel',
               'Custom data fields',
               'Priority support'
             ].map((feature) => (
