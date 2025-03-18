@@ -38,7 +38,28 @@ export function UniversitySearch({
   const { toast } = useToast()
   const { user } = useAuth()
 
+  // const checkSubscriptionStatus = useCallback(() => {
+  //   if (!user?.subscription) return true;
+    
+  //   if (user.subscription.expiry) {
+  //     const expiryDate = new Date(user.subscription.expiry);
+  //     const now = new Date();
+  //     if (now > expiryDate || user.subscription.status === 'expired') {
+  //       return selectedUniversities.length < 3;
+  //     }
+  //   }
+    
+  //   return isPremium || selectedUniversities.length < 3;
+  // }, [user?.subscription, isPremium, selectedUniversities.length]);
+  
+
+  // Subscription: Remove below function and use function above.
   const checkSubscriptionStatus = useCallback(() => {
+    // Always return true to allow unlimited universities
+    return true;
+    
+    // Original code commented out for future use
+    /*
     if (!user?.subscription) return true;
     
     if (user.subscription.expiry) {
@@ -50,7 +71,8 @@ export function UniversitySearch({
     }
     
     return isPremium || selectedUniversities.length < 3;
-  }, [user?.subscription, isPremium, selectedUniversities.length]);
+    */
+  }, []);
 
   useEffect(() => {
     fetchUniversities()
@@ -97,14 +119,15 @@ export function UniversitySearch({
       return
     }
 
-    if (!checkSubscriptionStatus()) {
-      toast({
-        variant: "destructive",
-        title: "Subscription Required",
-        description: "Your subscription has expired. Please upgrade to add more universities."
-      });
-      return;
-    }
+    // Subscription: Uncomment the code below
+    // if (!checkSubscriptionStatus()) {
+    //   toast({
+    //     variant: "destructive",
+    //     title: "Subscription Required",
+    //     description: "Your subscription has expired. Please upgrade to add more universities."
+    //   });
+    //   return;
+    // }
 
     try {
       setAddingUniversity(true)

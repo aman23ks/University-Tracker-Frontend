@@ -71,6 +71,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const userData = await response.json()
+        // Subscription: Remove below, making all users premium
+        userData.is_premium = true; // Make all users premium
+        if (!userData.subscription) {
+          userData.subscription = {
+            status: 'active',
+            expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 year from now
+          };
+        }
+        // Remove everything in between.
         setUser(userData)
       } else {
         localStorage.removeItem('token')
@@ -99,7 +108,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const { token, user: userData } = await response.json()
-
+      // Subscription: 
+       // Make user premium by default
+       userData.is_premium = true;
+       // Add fake subscription data if needed
+       if (!userData.subscription) {
+         userData.subscription = {
+           status: 'active',
+           expiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 year from now
+         };
+       }
+      //  Remove everything in between
       const subscriptionStatus = await checkAndUpdateSubscriptionStatus(token);
       if (subscriptionStatus) {
         userData.is_premium = subscriptionStatus.is_premium;
