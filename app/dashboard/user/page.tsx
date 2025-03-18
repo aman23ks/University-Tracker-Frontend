@@ -715,7 +715,7 @@ export default function UserDashboard() {
             </div>
 
             <div className="text-center space-y-2">
-              <p className="text-2xl font-bold">₹1000/month</p>
+              <p className="text-2xl font-bold">₹299/month</p>
               <p className="text-sm text-muted-foreground">
                 Cancel anytime. No questions asked.
               </p>
