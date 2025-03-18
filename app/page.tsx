@@ -121,7 +121,7 @@ export default function Home() {
               },
               {
                 title: "Premium",
-                price: "₹1000",
+                price: "299",
                 period: "/month",
                 description: "For serious applicants",
                 features: [
