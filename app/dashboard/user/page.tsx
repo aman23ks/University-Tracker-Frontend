@@ -680,7 +680,7 @@ export default function UserDashboard() {
             className="mt-3"
             onClick={() => setShowPaymentDialog(true)}
           >
-            Upgrade for ₹1000/month
+            Upgrade for ₹299/month
           </Button>
         </Alert>
       )}

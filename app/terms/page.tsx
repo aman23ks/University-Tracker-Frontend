@@ -59,7 +59,7 @@ export default function TermsPage() {
           <p>The Free Tier allows users to access basic features of the Service with limitations, including a maximum of 3 universities.</p>
 
           <h3>4.2 Premium Tier</h3>
-          <p>The Premium Tier provides unlimited access to all features of the Service for a subscription fee of 1000 rupees per month.</p>
+          <p>The Premium Tier provides unlimited access to all features of the Service for a subscription fee of 299 rupees per month.</p>
 
           <h3>4.3 Payment</h3>
           <p>All payments are processed securely through our third-party payment processors. By subscribing to the Premium Tier, you agree to pay the monthly fee. Each payment provides access to Premium features for one month. You will need to manually make a new payment each month to continue accessing Premium features.</p>
