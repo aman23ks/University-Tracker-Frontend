@@ -984,267 +984,272 @@ export function NotionTable({
     return { mainContent: contentStr, sourcesHeading: '', sources: [] };
   }, []);
 
-return (
-  <div className="space-y-4">
-    <div className="flex justify-between items-center mb-4">
-      <div className="flex items-center space-x-2">
-        <Input
-          type="text"
-          value={newColumn}
-          onChange={(e) => setNewColumn(e.target.value)}
-          placeholder="Add new column"
-          className="w-64"
-          disabled={loading}
-        />
-        <Button
-          onClick={addColumn}
-          disabled={loading}
-        >
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-          ) : 'Add Column'}
-        </Button>
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center mb-4">
+        <div className="flex items-center space-x-2">
+          <Input
+            type="text"
+            value={newColumn}
+            onChange={(e) => setNewColumn(e.target.value)}
+            placeholder="Add new column"
+            className="w-64"
+            disabled={loading}
+          />
+          <Button
+            onClick={addColumn}
+            disabled={loading}
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : 'Add Column'}
+          </Button>
+        </div>
       </div>
-    </div>
-    
-    {/* Hidden notification about subscription - keep as is */}
-    {isExpired && universities.length > 3 && (
-      <Alert className="bg-amber-50 border-amber-200 hidden"> {/*Subscription: Remove the hidden class*/}
-        <AlertDescription className="text-amber-800">
-          Your subscription has expired. Only showing the first 3 universities. 
-          {universities.length - 3} {universities.length - 3 === 1 ? 'university is' : 'universities are'} hidden. 
-          Upgrade to premium to see all your selected universities.
-        </AlertDescription>
-      </Alert>
-    )}
-
-    <div className="border rounded-lg overflow-hidden">
-      <Table>
-        <TableHeader className="sticky top-0 z-10 bg-white">
-          <TableRow>
-            {columns.map((column) => (
-              <TableHead key={column.id} className="whitespace-nowrap font-medium text-gray-900">
-                <div className="flex items-center justify-between">
-                  <span>{column.title}</span>
-                  {canDeleteColumn(column) && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDeletingColumn(column.id)}
-                      className="ml-2 text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </TableHead>
-            ))}
-            <TableHead className="whitespace-nowrap font-medium text-gray-900">Status</TableHead>
-            <TableHead className="w-10"></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {tableData.map((row) => {
-            return (
-              <TableRow 
-                key={row.id}
-                className={
-                  universityStates[row.id] === 'processing' || isProcessing(row.id) ? 'bg-blue-50' :
-                  processingUniversities.has(row.id) ? 'bg-yellow-50' :
-                  universityStates[row.id] === 'failed' || getStatus(row.id) === 'failed' ? 'bg-red-50' :
-                  'bg-white'
-                }
-              >
-                {columns.map((column) => {
-                  const cellValue = cellStatesRef.current[`${row.id}:${column.id}`]?.value || row[column.id] || '';
-                  const { mainContent, sources } = processContent(cellValue);
-                  
-                  return (
-                    <TableCell key={`${row.id}-${column.id}`} className="relative align-middle py-4 px-4">
-                    {editingCell?.rowId === row.id && editingCell?.columnId === column.id ? (
-                      <div className="flex items-center space-x-2">
-                        <Input
-                          value={editValue}
-                          onChange={(e) => setEditValue(e.target.value)}
-                          className="h-8"
-                        />
-                        <Button size="sm" onClick={saveEdit}>
-                          <Save className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="group">
-                        {isCellLoadingState(row.id, column.id) ? (
-                          <div className="flex items-center">
-                            <Loader2 className="h-4 w-4 animate-spin text-blue-500 mr-2" />
-                            <span className="text-gray-400">Loading data...</span>
-                          </div>
-                        ) : (
-                          <>
-                            {/* Main Content - always fully visible */}
-                            {mainContent && (
-                              <div className="prose prose-sm max-w-none">
-                                <ReactMarkdown>{mainContent}</ReactMarkdown>
-                              </div>
-                            )}
-                            
-                            {/* Sources section - formatted as requested */}
-                            {sources.length > 0 && (
-                              <div className="mt-4">
-                                <div className="font-medium">Sources:</div>
-                                {sources.map((source, index) => (
-                                  <div key={index} className="break-words">
-                                    {source}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </>
-                        )}
-                        
-                        {/* Edit button */}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCellEdit(row.id, column.id, cellValue)}
-                          disabled={isProcessing(row.id) || isCellLoadingState(row.id, column.id)}
-                          className="absolute top-0 right-0 bottom-0 left-0 m-auto opacity-0 group-hover:opacity-100 transition-opacity p-1 h-6 w-6 flex items-center justify-center"
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
-                  </TableCell>
-                  );
-                })}
-                
-                <TableCell className="align-middle">
-                  <div className="flex items-center gap-2">
-                    <StatusBadge status={universityStates[row.id] || getStatus(row.id) || row.status || 'pending'} />
-                    {(universityStates[row.id] === 'processing' || isProcessing(row.id) || processingUniversities.has(row.id)) && (
-                      <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+      
+      {/* Hidden notification about subscription - keep as is */}
+      {isExpired && universities.length > 3 && (
+        <Alert className="bg-amber-50 border-amber-200 hidden"> {/*Subscription: Remove the hidden class*/}
+          <AlertDescription className="text-amber-800">
+            Your subscription has expired. Only showing the first 3 universities. 
+            {universities.length - 3} {universities.length - 3 === 1 ? 'university is' : 'universities are'} hidden. 
+            Upgrade to premium to see all your selected universities.
+          </AlertDescription>
+        </Alert>
+      )}
+  
+      <div className="border rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader className="sticky top-0 z-10 bg-white">
+            <TableRow>
+              {columns.map((column) => (
+                <TableHead key={column.id} className="whitespace-nowrap font-medium text-gray-900">
+                  <div className="flex items-center justify-between">
+                    <span>{column.title}</span>
+                    {canDeleteColumn(column) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeletingColumn(column.id)}
+                        className="ml-2 text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     )}
                   </div>
-                </TableCell>
-                
-                <TableCell className="w-10 align-middle">
-                  {isPremium && onRemoveUniversity && !isProcessing(row.id) && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        const university = universities.find(u => u.id === row.id);
-                        if (university) onRemoveUniversity(university);
-                      }}
-                      className="text-red-500 hover:text-red-700 p-1 h-7 w-7"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </div>
-    
-    {loading && (
-      <div className="flex justify-center items-center p-4">
-        <Loader2 className="h-6 w-6 animate-spin" />
+                </TableHead>
+              ))}
+              <TableHead className="whitespace-nowrap font-medium text-gray-900">Status</TableHead>
+              <TableHead className="w-10"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tableData.map((row) => {
+              return (
+                <TableRow 
+                  key={row.id}
+                  className={
+                    universityStates[row.id] === 'processing' || isProcessing(row.id) ? 'bg-blue-50' :
+                    processingUniversities.has(row.id) ? 'bg-yellow-50' :
+                    universityStates[row.id] === 'failed' || getStatus(row.id) === 'failed' ? 'bg-red-50' :
+                    'bg-white'
+                  }
+                >
+                  {columns.map((column) => {
+                    const cellValue = cellStatesRef.current[`${row.id}:${column.id}`]?.value || row[column.id] || '';
+                    const { mainContent, sources } = processContent(cellValue);
+                    
+                    return (
+                      <TableCell key={`${row.id}-${column.id}`} className="relative align-middle py-4 px-4">
+                        {editingCell?.rowId === row.id && editingCell?.columnId === column.id ? (
+                          <div className="flex flex-col space-y-2">
+                            <textarea
+                              value={editValue}
+                              onChange={(e) => setEditValue(e.target.value)}
+                              className="w-full min-h-[100px] p-2 border border-gray-300 rounded-md"
+                            />
+                            <div className="flex justify-end">
+                              <Button size="sm" onClick={saveEdit} className="flex items-center space-x-1">
+                                <Save className="h-4 w-4" />
+                                <span>Save</span>
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="group relative">
+                            {isCellLoadingState(row.id, column.id) ? (
+                              <div className="flex items-center">
+                                <Loader2 className="h-4 w-4 animate-spin text-blue-500 mr-2" />
+                                <span className="text-gray-400">Loading data...</span>
+                              </div>
+                            ) : (
+                              <>
+                                {/* Main Content - always fully visible */}
+                                {mainContent && (
+                                  <div className="prose prose-sm max-w-none">
+                                    <ReactMarkdown>{mainContent}</ReactMarkdown>
+                                  </div>
+                                )}
+                                
+                                {/* Sources section - formatted as requested */}
+                                {sources.length > 0 && (
+                                  <div className="mt-4">
+                                    <div className="font-medium">Sources:</div>
+                                    {sources.map((source, index) => (
+                                      <div key={index} className="break-words">
+                                        {source}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                
+                                {/* Edit button - positioned at right and vertically centered */}
+                                <div className="absolute inset-y-0 right-1 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleCellEdit(row.id, column.id, cellValue)}
+                                    disabled={isProcessing(row.id) || isCellLoadingState(row.id, column.id)}
+                                    className="p-1 h-6 w-6 bg-white hover:bg-gray-100 border border-gray-200 rounded-full shadow-sm"
+                                  >
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </TableCell>
+                    );
+                  })}
+                  
+                  <TableCell className="align-middle">
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={universityStates[row.id] || getStatus(row.id) || row.status || 'pending'} />
+                      {(universityStates[row.id] === 'processing' || isProcessing(row.id) || processingUniversities.has(row.id)) && (
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                      )}
+                    </div>
+                  </TableCell>
+                  
+                  <TableCell className="w-10 align-middle">
+                    {isPremium && onRemoveUniversity && !isProcessing(row.id) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const university = universities.find(u => u.id === row.id);
+                          if (university) onRemoveUniversity(university);
+                        }}
+                        className="text-red-500 hover:text-red-700 p-1 h-7 w-7"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
-    )}
-
-    {/* Delete Column Dialog */}
-    <AlertDialog open={!!deletingColumn} onOpenChange={() => setDeletingColumn(null)}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete Column</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete this column? This action cannot be undone
-            and will remove all associated data.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            onClick={() => deletingColumn && handleDeleteColumn(deletingColumn)}
-            className="bg-red-500 hover:bg-red-600"
-          >
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-
-    {/* Markdown styling */}
-    <style jsx global>{`
-      .markdown-content ul, .prose ul {
-        list-style-type: disc;
-        padding-left: 1.5rem;
-        margin: 0.5rem 0;
-      }
       
-      .markdown-content ol, .prose ol {
-        list-style-type: decimal;
-        padding-left: 1.5rem;
-        margin: 0.5rem 0;
-      }
-      
-      .markdown-content p, .prose p {
-        margin: 0.5rem 0;
-        word-break: break-word;
-      }
-      
-      .markdown-content strong, .markdown-content b, 
-      .prose strong, .prose b {
-        font-weight: 600;
-      }
-      
-      .markdown-content em, .markdown-content i,
-      .prose em, .prose i {
-        font-style: italic;
-      }
-      
-      .markdown-content h1, .markdown-content h2, .markdown-content h3, 
-      .markdown-content h4, .markdown-content h5, .markdown-content h6,
-      .prose h1, .prose h2, .prose h3, 
-      .prose h4, .prose h5, .prose h6 {
-        font-weight: 600;
-        margin: 0.75rem 0 0.5rem 0;
-      }
-      
-      .markdown-content a, .prose a {
-        color: #2563eb;
-        text-decoration: underline;
-      }
-      
-      .markdown-content blockquote, .prose blockquote {
-        border-left: 3px solid #e5e7eb;
-        padding-left: 1rem;
-        margin: 0.75rem 0;
-        color: #4b5563;
-      }
-      
-      .markdown-content code, .prose code {
-        background-color: #f3f4f6;
-        padding: 0.1rem 0.2rem;
-        border-radius: 0.25rem;
-        font-family: monospace;
-      }
-      
-      .markdown-content pre, .prose pre {
-        background-color: #f3f4f6;
-        padding: 0.75rem;
-        border-radius: 0.375rem;
-        overflow-x: auto;
-        margin: 0.75rem 0;
-      }
-      
-      .markdown-content pre code, .prose pre code {
-        background-color: transparent;
-        padding: 0;
-      }
-    `}</style>
-  </div>
-)};
+      {loading && (
+        <div className="flex justify-center items-center p-4">
+          <Loader2 className="h-6 w-6 animate-spin" />
+        </div>
+      )}
+  
+      {/* Delete Column Dialog */}
+      <AlertDialog open={!!deletingColumn} onOpenChange={() => setDeletingColumn(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Column</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this column? This action cannot be undone
+              and will remove all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingColumn && handleDeleteColumn(deletingColumn)}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+  
+      {/* Markdown styling */}
+      <style jsx global>{`
+        .markdown-content ul, .prose ul {
+          list-style-type: disc;
+          padding-left: 1.5rem;
+          margin: 0.5rem 0;
+        }
+        
+        .markdown-content ol, .prose ol {
+          list-style-type: decimal;
+          padding-left: 1.5rem;
+          margin: 0.5rem 0;
+        }
+        
+        .markdown-content p, .prose p {
+          margin: 0.5rem 0;
+          word-break: break-word;
+        }
+        
+        .markdown-content strong, .markdown-content b, 
+        .prose strong, .prose b {
+          font-weight: 600;
+        }
+        
+        .markdown-content em, .markdown-content i,
+        .prose em, .prose i {
+          font-style: italic;
+        }
+        
+        .markdown-content h1, .markdown-content h2, .markdown-content h3, 
+        .markdown-content h4, .markdown-content h5, .markdown-content h6,
+        .prose h1, .prose h2, .prose h3, 
+        .prose h4, .prose h5, .prose h6 {
+          font-weight: 600;
+          margin: 0.75rem 0 0.5rem 0;
+        }
+        
+        .markdown-content a, .prose a {
+          color: #2563eb;
+          text-decoration: underline;
+        }
+        
+        .markdown-content blockquote, .prose blockquote {
+          border-left: 3px solid #e5e7eb;
+          padding-left: 1rem;
+          margin: 0.75rem 0;
+          color: #4b5563;
+        }
+        
+        .markdown-content code, .prose code {
+          background-color: #f3f4f6;
+          padding: 0.1rem 0.2rem;
+          border-radius: 0.25rem;
+          font-family: monospace;
+        }
+        
+        .markdown-content pre, .prose pre {
+          background-color: #f3f4f6;
+          padding: 0.75rem;
+          border-radius: 0.375rem;
+          overflow-x: auto;
+          margin: 0.75rem 0;
+        }
+        
+        .markdown-content pre code, .prose pre code {
+          background-color: transparent;
+          padding: 0;
+        }
+      `}</style>
+    </div>
+  )};
