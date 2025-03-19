@@ -12,7 +12,7 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table'
-import { AlertTriangle, Pencil, Save, X, Loader2, Trash2 } from 'lucide-react'
+import { AlertTriangle, Pencil, Save, X, Loader2, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   AlertDialog,
@@ -24,10 +24,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
 import { useAuth } from '@/components/providers/AuthProvider'
 import { useUniversityStatus } from '../../lib/hooks/useUniversityStatus'
 import { useSocket, UniversityUpdateData, UserUpdateData } from '../../lib/hooks/useSocket'
 import React from 'react'
+import ReactMarkdown from 'react-markdown'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL
 
@@ -118,6 +126,11 @@ interface CellState {
   value: string | null;
 }
 
+interface Source {
+  id: string;
+  url: string;
+}
+
 export function NotionTable({ 
   universities, 
   onRemoveUniversity, 
@@ -142,6 +155,12 @@ export function NotionTable({
   const { isProcessing, getStatus } = useUniversityStatus();
   const { toast } = useToast()
   
+  // For expanded view of content
+  const [expandedCell, setExpandedCell] = useState<{rowId: string, columnId: string, value: string} | null>(null)
+  
+  // States for row expansion
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  
   // Force update function
   const [, forceUpdate] = useReducer(x => x + 1, 0);
   
@@ -151,6 +170,31 @@ export function NotionTable({
   // Keep track of which universities are in processing state
   const [universityStates, setUniversityStates] = useState<Record<string, string>>({});
 
+  const isExpired = user?.subscription?.status === 'expired';
+  const hasHiddenUniversities = isExpired && universities.length > 3;
+
+  // Toggle row expansion
+  const toggleRowExpansion = (rowId: string) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(rowId)) {
+        newSet.delete(rowId);
+      } else {
+        newSet.add(rowId);
+      }
+      return newSet;
+    });
+  };
+
+  // Expand all rows
+  const expandAllRows = () => {
+    setExpandedRows(new Set(tableData.map(row => row.id)));
+  };
+
+  // Collapse all rows
+  const collapseAllRows = () => {
+    setExpandedRows(new Set());
+  };
 
   // Filter visible universities based on subscription status
   // const filterVisibleUniversities = useCallback((unis: University[]): University[] => {
@@ -889,63 +933,101 @@ export function NotionTable({
   // Connect to WebSocket
   useSocket(handleStatusUpdate, () => {}, handleUserUpdate);
 
-  // If we have an error, show an alert
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    );
-  }
-  
-  // Check if we should show notification about hidden universities
-  const isExpired = user?.subscription?.status === 'expired';
-  const hasHiddenUniversities = isExpired && universities.length > 3;
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center space-x-2">
-          <Input
-            type="text"
-            value={newColumn}
-            onChange={(e) => setNewColumn(e.target.value)}
-            placeholder="Add new column"
-            className="w-64"
-            disabled={loading}
-          />
-          <Button
-            onClick={addColumn}
-            disabled={loading}
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : 'Add Column'}
-          </Button>
-        </div>
-      </div>
+  // Process content to separate main content from sources
+  const processContent = useCallback((content: any): {mainContent: string, sourcesHeading: string, sources: string[]} => {
+    if (content === null || content === undefined) {
+      return { mainContent: '', sourcesHeading: '', sources: [] };
+    }
+    
+    const contentStr = String(content);
+    
+    // Look for "Sources:" heading
+    const sourcesMatch = contentStr.match(/\**Sources:/i);
+    
+    if (sourcesMatch && sourcesMatch.index !== undefined) {
+      // Get everything before the sources section as main content
+      // This will preserve the ** markdown formatting
+      const mainContent = contentStr.substring(0, sourcesMatch.index).trim();
       
-      {hasHiddenUniversities && (
-        <Alert className="bg-amber-50 border-amber-200 hidden"> {/*Subscription: Remove the hideen class*/}
-          <AlertDescription className="text-amber-800">
-            Your subscription has expired. Only showing the first 3 universities. 
-            {universities.length - 3} {universities.length - 3 === 1 ? 'university is' : 'universities are'} hidden. 
-            Upgrade to premium to see all your selected universities.
-          </AlertDescription>
-        </Alert>
-      )}
+      // Extract the sources part
+      const sourcesText = contentStr.substring(sourcesMatch.index).trim();
+      
+      // Get just the "Sources:" part
+      const sourcesHeading = "**Sources:**";
+      
+      // Extract the individual source references
+      const sourcesContent = sourcesText.substring(sourcesHeading.length).trim();
+      
+      // Split by the reference pattern [1], [2], etc.
+      const sourcePattern = /\[\d+\]/g;
+      const sourceMatches = sourcesContent.match(sourcePattern) || [];
+      
+      const sources: string[] = [];
+      let lastIndex = 0;
+      
+      // Extract each source with its number
+      sourceMatches.forEach((match) => {
+        const matchIndex = sourcesContent.indexOf(match, lastIndex);
+        const nextMatchIndex = sourcesContent.indexOf('[', matchIndex + 1);
+        
+        const endIndex = nextMatchIndex > -1 ? nextMatchIndex : sourcesContent.length;
+        const source = sourcesContent.substring(matchIndex, endIndex).trim();
+        
+        sources.push(source);
+        lastIndex = matchIndex + 1;
+      });
+      
+      return { mainContent, sourcesHeading, sources };
+    }
+    
+    // If no sources section found, return the whole content
+    return { mainContent: contentStr, sourcesHeading: '', sources: [] };
+  }, []);
 
-      <div className="border rounded-lg overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map((column) => (
-                <TableHead key={column.id} className="whitespace-nowrap">
-                  <div className="flex items-center justify-between">
-                    {column.title}
-                    {canDeleteColumn(column) && (
-                      <Button
+return (
+  <div className="space-y-4">
+    <div className="flex justify-between items-center mb-4">
+      <div className="flex items-center space-x-2">
+        <Input
+          type="text"
+          value={newColumn}
+          onChange={(e) => setNewColumn(e.target.value)}
+          placeholder="Add new column"
+          className="w-64"
+          disabled={loading}
+        />
+        <Button
+          onClick={addColumn}
+          disabled={loading}
+        >
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : 'Add Column'}
+        </Button>
+      </div>
+    </div>
+    
+    {/* Hidden notification about subscription - keep as is */}
+    {isExpired && universities.length > 3 && (
+      <Alert className="bg-amber-50 border-amber-200 hidden"> {/*Subscription: Remove the hidden class*/}
+        <AlertDescription className="text-amber-800">
+          Your subscription has expired. Only showing the first 3 universities. 
+          {universities.length - 3} {universities.length - 3 === 1 ? 'university is' : 'universities are'} hidden. 
+          Upgrade to premium to see all your selected universities.
+        </AlertDescription>
+      </Alert>
+    )}
+
+    <div className="border rounded-lg overflow-hidden">
+      <Table>
+        <TableHeader className="sticky top-0 z-10 bg-white">
+          <TableRow>
+            {columns.map((column) => (
+              <TableHead key={column.id} className="whitespace-nowrap font-medium text-gray-900">
+                <div className="flex items-center justify-between">
+                  <span>{column.title}</span>
+                  {canDeleteColumn(column) && (
+                    <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setDeletingColumn(column.id)}
@@ -957,88 +1039,116 @@ export function NotionTable({
                 </div>
               </TableHead>
             ))}
-            <TableHead className="whitespace-nowrap">Status</TableHead>
-            <TableHead>Actions</TableHead>
+            <TableHead className="whitespace-nowrap font-medium text-gray-900">Status</TableHead>
+            <TableHead className="w-10"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {tableData.map((row) => (
-            <TableRow 
-              key={row.id}
-              className={
-                universityStates[row.id] === 'processing' || isProcessing(row.id) ? 'bg-blue-50' :
-                processingUniversities.has(row.id) ? 'bg-yellow-50' :
-                universityStates[row.id] === 'failed' || getStatus(row.id) === 'failed' ? 'bg-red-50' :
-                'bg-white'
-              }
-            >
-              {columns.map((column) => (
-                <TableCell key={`${row.id}-${column.id}`}>
-                  {editingCell?.rowId === row.id && editingCell?.columnId === column.id ? (
-                    <div className="flex items-center space-x-2">
-                      <Input
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        className="h-8"
-                      />
-                      <Button size="sm" onClick={saveEdit}>
-                        <Save className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <span className="flex-1">
+          {tableData.map((row) => {
+            return (
+              <TableRow 
+                key={row.id}
+                className={
+                  universityStates[row.id] === 'processing' || isProcessing(row.id) ? 'bg-blue-50' :
+                  processingUniversities.has(row.id) ? 'bg-yellow-50' :
+                  universityStates[row.id] === 'failed' || getStatus(row.id) === 'failed' ? 'bg-red-50' :
+                  'bg-white'
+                }
+              >
+                {columns.map((column) => {
+                  const cellValue = cellStatesRef.current[`${row.id}:${column.id}`]?.value || row[column.id] || '';
+                  const { mainContent, sources } = processContent(cellValue);
+                  
+                  return (
+                    <TableCell key={`${row.id}-${column.id}`} className="relative align-middle py-4 px-4">
+                    {editingCell?.rowId === row.id && editingCell?.columnId === column.id ? (
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          className="h-8"
+                        />
+                        <Button size="sm" onClick={saveEdit}>
+                          <Save className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="group">
                         {isCellLoadingState(row.id, column.id) ? (
                           <div className="flex items-center">
                             <Loader2 className="h-4 w-4 animate-spin text-blue-500 mr-2" />
                             <span className="text-gray-400">Loading data...</span>
                           </div>
                         ) : (
-                          // Show cell value from our ref or fall back to table data
-                          cellStatesRef.current[`${row.id}:${column.id}`]?.value || row[column.id] || ''
+                          <>
+                            {/* Main Content - always fully visible */}
+                            {mainContent && (
+                              <div className="prose prose-sm max-w-none">
+                                <ReactMarkdown>{mainContent}</ReactMarkdown>
+                              </div>
+                            )}
+                            
+                            {/* Sources section - formatted as requested */}
+                            {sources.length > 0 && (
+                              <div className="mt-4">
+                                <div className="font-medium">Sources:</div>
+                                {sources.map((source, index) => (
+                                  <div key={index} className="break-words">
+                                    {source}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
                         )}
-                      </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleCellEdit(row.id, column.id, row[column.id] || '')}
-                        disabled={isProcessing(row.id) || isCellLoadingState(row.id, column.id)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </div>
+                        
+                        {/* Edit button */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCellEdit(row.id, column.id, cellValue)}
+                          disabled={isProcessing(row.id) || isCellLoadingState(row.id, column.id)}
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 h-6 w-6"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
+                  );
+                })}
+                
+                <TableCell className="align-middle">
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={universityStates[row.id] || getStatus(row.id) || row.status || 'pending'} />
+                    {(universityStates[row.id] === 'processing' || isProcessing(row.id) || processingUniversities.has(row.id)) && (
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                    )}
+                  </div>
+                </TableCell>
+                
+                <TableCell className="w-10 align-middle">
+                  {isPremium && onRemoveUniversity && !isProcessing(row.id) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const university = universities.find(u => u.id === row.id);
+                        if (university) onRemoveUniversity(university);
+                      }}
+                      className="text-red-500 hover:text-red-700 p-1 h-7 w-7"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   )}
                 </TableCell>
-              ))}
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={universityStates[row.id] || getStatus(row.id) || row.status || 'pending'} />
-                  {(universityStates[row.id] === 'processing' || isProcessing(row.id) || processingUniversities.has(row.id)) && (
-                    <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
-                  )}
-                </div>
-              </TableCell>
-              <TableCell>
-                {isPremium && onRemoveUniversity && !isProcessing(row.id) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      const university = universities.find(u => u.id === row.id);
-                      if (university) onRemoveUniversity(university);
-                    }}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </TableCell>
-            </TableRow>
-          ))}
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
-      
+    
     {loading && (
       <div className="flex justify-center items-center p-4">
         <Loader2 className="h-6 w-6 animate-spin" />
@@ -1066,6 +1176,75 @@ export function NotionTable({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    {/* Markdown styling */}
+    <style jsx global>{`
+      .markdown-content ul, .prose ul {
+        list-style-type: disc;
+        padding-left: 1.5rem;
+        margin: 0.5rem 0;
+      }
+      
+      .markdown-content ol, .prose ol {
+        list-style-type: decimal;
+        padding-left: 1.5rem;
+        margin: 0.5rem 0;
+      }
+      
+      .markdown-content p, .prose p {
+        margin: 0.5rem 0;
+        word-break: break-word;
+      }
+      
+      .markdown-content strong, .markdown-content b, 
+      .prose strong, .prose b {
+        font-weight: 600;
+      }
+      
+      .markdown-content em, .markdown-content i,
+      .prose em, .prose i {
+        font-style: italic;
+      }
+      
+      .markdown-content h1, .markdown-content h2, .markdown-content h3, 
+      .markdown-content h4, .markdown-content h5, .markdown-content h6,
+      .prose h1, .prose h2, .prose h3, 
+      .prose h4, .prose h5, .prose h6 {
+        font-weight: 600;
+        margin: 0.75rem 0 0.5rem 0;
+      }
+      
+      .markdown-content a, .prose a {
+        color: #2563eb;
+        text-decoration: underline;
+      }
+      
+      .markdown-content blockquote, .prose blockquote {
+        border-left: 3px solid #e5e7eb;
+        padding-left: 1rem;
+        margin: 0.75rem 0;
+        color: #4b5563;
+      }
+      
+      .markdown-content code, .prose code {
+        background-color: #f3f4f6;
+        padding: 0.1rem 0.2rem;
+        border-radius: 0.25rem;
+        font-family: monospace;
+      }
+      
+      .markdown-content pre, .prose pre {
+        background-color: #f3f4f6;
+        padding: 0.75rem;
+        border-radius: 0.375rem;
+        overflow-x: auto;
+        margin: 0.75rem 0;
+      }
+      
+      .markdown-content pre code, .prose pre code {
+        background-color: transparent;
+        padding: 0;
+      }
+    `}</style>
   </div>
-);
-}
+)};
