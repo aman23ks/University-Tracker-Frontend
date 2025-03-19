@@ -1108,7 +1108,7 @@ return (
                           size="sm"
                           onClick={() => handleCellEdit(row.id, column.id, cellValue)}
                           disabled={isProcessing(row.id) || isCellLoadingState(row.id, column.id)}
-                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 h-6 w-6"
+                          className="absolute top-0 right-0 bottom-0 left-0 m-auto opacity-0 group-hover:opacity-100 transition-opacity p-1 h-6 w-6 flex items-center justify-center"
                         >
                           <Pencil className="h-3 w-3" />
                         </Button>
