@@ -56,15 +56,10 @@ export default function FeedbackPage() {
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      fetchUserFeedback();
-    }, 30000); // Refresh every 30 seconds
-    
-    // Initial fetch
+    // Only fetch once when component mounts
     fetchUserFeedback();
     
-    // Clean up on unmount
-    return () => clearInterval(intervalId);
+    // No interval needed
   }, []);
 
   const fetchUserFeedback = async () => {
