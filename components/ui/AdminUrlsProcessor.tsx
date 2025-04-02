@@ -366,7 +366,7 @@ export function AdminUrlProcessor() {
               <SelectTrigger>
                 <SelectValue placeholder="Select a namespace" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-60 overflow-y-auto">
                 {loadingNamespaces ? (
                   <div className="flex items-center justify-center p-2">
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
