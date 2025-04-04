@@ -12,7 +12,7 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table'
-import { AlertTriangle, Pencil, Save, X, Loader2, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
+import { AlertTriangle, Pencil, Save, X, Loader2, Trash2, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   AlertDialog,
@@ -155,8 +155,12 @@ export function NotionTable({
   const { isProcessing, getStatus } = useUniversityStatus();
   const { toast } = useToast()
   
-  // For expanded view of content
-  const [expandedCell, setExpandedCell] = useState<{rowId: string, columnId: string, value: string} | null>(null)
+  // For expanded view of content (view modal)
+  const [viewModalOpen, setViewModalOpen] = useState(false)
+  const [viewModalContent, setViewModalContent] = useState<{rowId: string, columnId: string, value: string, title: string} | null>(null)
+  
+  // For edit modal
+  const [editModalOpen, setEditModalOpen] = useState(false)
   
   // States for row expansion
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
@@ -194,6 +198,19 @@ export function NotionTable({
   // Collapse all rows
   const collapseAllRows = () => {
     setExpandedRows(new Set());
+  };
+
+  // Open view modal
+  const openViewModal = (rowId: string, columnId: string, value: string, title: string) => {
+    setViewModalContent({ rowId, columnId, value, title });
+    setViewModalOpen(true);
+  };
+
+  // Open edit modal
+  const openEditModal = (rowId: string, columnId: string, value: string) => {
+    setEditingCell({ rowId, columnId });
+    setEditValue(value);
+    setEditModalOpen(true);
   };
 
   // Filter visible universities based on subscription status
@@ -312,11 +329,12 @@ export function NotionTable({
   }, [processingUniversities, columns]);
 
   // Initialize table data from universities
-  useEffect(() => {
+   useEffect(() => {
     if (universities) {
       // Filter out universities based on subscription status
       const visibleUniversities = filterVisibleUniversities(universities);
-      
+      console.log("-------visibleUnis------")
+      console.log(visibleUniversities)
       setTableData(visibleUniversities.map(uni => ({
         ...uni,
         // Convert programs array to string if it's an array
@@ -327,6 +345,8 @@ export function NotionTable({
         url: uni.url || '',
       })));
     }
+    console.log("------table Data------")
+    console.log(tableData)
   }, [universities, filterVisibleUniversities]);
 
   // Set loading state for cell
@@ -401,7 +421,9 @@ export function NotionTable({
           name: university.name,
           url: university.url,
           status: university.status,
-          programs: Array.isArray(university.programs) ? university.programs.join(', ') : university.programs,
+          programs: Array.isArray(university.programs) 
+            ? university.programs.join(', ') 
+            : university.programs || 'MS Computer Science',
           last_updated: university.last_updated ? new Date(university.last_updated).toLocaleString() : 'N/A',
           created_at: university.created_at ? new Date(university.created_at).toLocaleString() : 'N/A'
         };
@@ -541,7 +563,7 @@ export function NotionTable({
           name: uni.name,
           url: uni.url,
           status: uni.status || 'processing', // Mark as processing by default
-          programs: Array.isArray(uni.programs) ? uni.programs.join(', ') : uni.programs || '',
+          programs: Array.isArray(uni.programs) ? uni.programs.join(', ') : uni.programs || 'MS Computer Science',
           last_updated: uni.last_updated ? new Date(uni.last_updated).toLocaleString() : 'N/A'
         }))
       ]);
@@ -598,6 +620,35 @@ export function NotionTable({
         [university.id]: 'processing'
       }));
       
+      // First get university name for better context
+      const universityResponse = await fetch(`${API_URL}/api/universities/${university.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      let universityName = university.name || 'the university';
+      let programName = university.programs || 'MS Computer Science';
+      
+      // If we can get university details, use them
+      if (universityResponse.ok) {
+        const universityDetails = await universityResponse.json();
+        universityName = universityDetails.name || university.name || 'the university';
+        programName = Array.isArray(universityDetails.programs) 
+          ? universityDetails.programs[0] 
+          : universityDetails.programs || university.programs || 'MS Computer Science';
+      }
+      
+      // Check if the column name already contains a description
+      let questionFormat;
+      if (columnTitle.includes('-') && columnTitle.split('-').length > 1) {
+        // Use a more natural question format for descriptive column names
+        questionFormat = `What are the details about ${columnTitle} for ${universityName}'s ${programName} program?`;
+      } else {
+        // Use original format for simple column names
+        questionFormat = `What is the ${columnTitle} requirement or information for ${universityName}'s ${programName} program?`;
+      }
+      
       const ragResponse = await fetch(`${API_URL}/api/rag`, {
         method: 'POST',
         headers: {
@@ -605,7 +656,7 @@ export function NotionTable({
           Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
-          question: `What is the ${columnTitle} for this university program?`,
+          question: questionFormat,
           university_id: university.id
         })
       });
@@ -729,8 +780,7 @@ export function NotionTable({
 
   // Handle cell editing
   const handleCellEdit = useCallback((rowId: string, columnId: string, value: string) => {
-    setEditingCell({ rowId, columnId });
-    setEditValue(value);
+    openEditModal(rowId, columnId, value);
   }, []);
 
   // Save cell edit
@@ -774,6 +824,7 @@ export function NotionTable({
     } finally {
       setEditingCell(null);
       setEditValue('');
+      setEditModalOpen(false);
     }
   }, [editingCell, editValue, setCellLoadingState, setCellData, toast]);
 
@@ -835,421 +886,451 @@ export function NotionTable({
   }, [user]);
 
   // Handle WebSocket updates for cell data
-  const handleStatusUpdate = useCallback((data: UniversityUpdateData) => {
-    // Only process updates for current user
-    if (data.user_email && data.user_email !== user?.email) return;
+  // Handle WebSocket updates for cell data
+const handleStatusUpdate = useCallback((data: UniversityUpdateData) => {
+  // Only process updates for current user
+  if (data.user_email && data.user_email !== user?.email) return;
+  
+  // Handle column_processed events (cell updates)
+  if (data.status === 'column_processed' && data.column_id && data.university_id) {
+    console.log(`Column processed: ${data.column_id} for university ${data.university_id}`);
     
-    // Handle column_processed events (cell updates)
-    if (data.status === 'column_processed' && data.column_id && data.university_id) {
-      console.log(`Column processed: ${data.column_id} for university ${data.university_id}`);
-      
-      // Make sure the university exists in our table data
-      const universityExists = tableData.some(row => row.id === data.university_id);
-      
-      if (!universityExists) {
-        console.log(`University ${data.university_id} not in table yet, skipping update`);
-        return;
-      }
-      
-      // Update the cell if value is provided
-      if (data.value !== undefined) {
-        setCellData(data.university_id, data.column_id as string, data.value);
-      }
-      
-      // Set university status to column_processed
-      setUniversityStates(prev => ({
-        ...prev,
-        [data.university_id]: 'column_processed'
-      }));
-      
+    // Make sure the university exists in our table data
+    const universityExists = tableData.some(row => row.id === data.university_id);
+    
+    if (!universityExists) {
+      console.log(`University ${data.university_id} not in table yet, skipping update`);
       return;
     }
     
-    // Handle completed/failed status updates
-    if (['completed', 'failed'].includes(data.status) && data.university_id) {
-      console.log(`Status update to ${data.status} for university ${data.university_id}`);
-      
-      // Update university status
-      setUniversityStates(prev => ({
-        ...prev,
-        [data.university_id]: data.status
-      }));
-      
-      // Clear all loading states for this university
-      Object.keys(cellStatesRef.current).forEach(key => {
-        if (key.startsWith(`${data.university_id}:`)) {
-          cellStatesRef.current[key].loading = false;
-        }
+    // Update the cell if value is provided
+    if (data.value !== undefined) {
+      setCellData(data.university_id, data.column_id as string, data.value);
+    }
+    
+    // Set university status to column_processed
+    setUniversityStates(prev => ({
+      ...prev,
+      [data.university_id]: 'column_processed'
+    }));
+    
+    return;
+  }
+  
+  // Handle completed/failed status updates
+  if (['completed', 'failed'].includes(data.status) && data.university_id) {
+    console.log(`Status update to ${data.status} for university ${data.university_id}`);
+    
+    // Update university status
+    setUniversityStates(prev => ({
+      ...prev,
+      [data.university_id]: data.status
+    }));
+    
+    // Clear all loading states for this university
+    Object.keys(cellStatesRef.current).forEach(key => {
+      if (key.startsWith(`${data.university_id}:`)) {
+        cellStatesRef.current[key].loading = false;
+      }
+    });
+    
+    forceUpdate();
+  }
+}, [user?.email, tableData, setCellData]);
+
+// Handle user updates from WebSocket
+const handleUserUpdate = useCallback((data: UserUpdateData) => {
+  // Only process updates for current user
+  if (data.user_email !== user?.email) return;
+  
+  if (data.type === 'processing_started') {
+    console.log('Processing started:', data);
+    
+    // First, add any new universities to the table
+    if (data.university_ids && data.university_ids.length > 0) {
+      // Add the previously hidden universities to the table
+      addVisibleUniversities(data.university_ids);
+    }
+    
+    toast({
+      title: "Premium Restored",
+      description: `Processing data for ${data.hidden_universities_count || 0} previously hidden ${
+        (data.hidden_universities_count || 0) === 1 ? 'university' : 'universities'
+      }.`,
+      duration: 5000
+    });
+  }
+  
+  if (data.type === 'subscription_reactivated') {
+    toast({
+      title: "Processing Complete",
+      description: `Successfully processed data for all universities.`,
+      duration: 5000
+    });
+    
+    // Set all university statuses to 'completed'
+    if (data.university_ids) {
+      data.university_ids.forEach(uniId => {
+        setUniversityStates(prev => ({
+          ...prev,
+          [uniId]: 'completed'
+        }));
       });
       
       forceUpdate();
     }
-  }, [user?.email, tableData, setCellData]);
+  }
+}, [user?.email, addVisibleUniversities, toast]);
 
-  // Handle user updates from WebSocket
-  const handleUserUpdate = useCallback((data: UserUpdateData) => {
-    // Only process updates for current user
-    if (data.user_email !== user?.email) return;
-    
-    if (data.type === 'processing_started') {
-      console.log('Processing started:', data);
-      
-      // First, add any new universities to the table
-      if (data.university_ids && data.university_ids.length > 0) {
-        // Add the previously hidden universities to the table
-        addVisibleUniversities(data.university_ids);
-      }
-      
-      toast({
-        title: "Premium Restored",
-        description: `Processing data for ${data.hidden_universities_count || 0} previously hidden ${
-          (data.hidden_universities_count || 0) === 1 ? 'university' : 'universities'
-        }.`,
-        duration: 5000
-      });
-    }
-    
-    if (data.type === 'subscription_reactivated') {
-      toast({
-        title: "Processing Complete",
-        description: `Successfully processed data for all universities.`,
-        duration: 5000
-      });
-      
-      // Set all university statuses to 'completed'
-      if (data.university_ids) {
-        data.university_ids.forEach(uniId => {
-          setUniversityStates(prev => ({
-            ...prev,
-            [uniId]: 'completed'
-          }));
-        });
-        
-        forceUpdate();
-      }
-    }
-  }, [user?.email, addVisibleUniversities, toast]);
+// Connect to WebSocket
+useSocket(handleStatusUpdate, () => {}, handleUserUpdate);
 
-  // Connect to WebSocket
-  useSocket(handleStatusUpdate, () => {}, handleUserUpdate);
-
-  // Process content to separate main content from sources
-  const processContent = useCallback((content: any): {mainContent: string, sourcesHeading: string, sources: string[]} => {
-    if (content === null || content === undefined) {
-      return { mainContent: '', sourcesHeading: '', sources: [] };
-    }
-    
-    const contentStr = String(content);
-    
-    // Look for "Sources:" heading
-    const sourcesMatch = contentStr.match(/\**Sources:/i);
-    
-    if (sourcesMatch && sourcesMatch.index !== undefined) {
-      // Get everything before the sources section as main content
-      // This will preserve the ** markdown formatting
-      const mainContent = contentStr.substring(0, sourcesMatch.index).trim();
-      
-      // Extract the sources part
-      const sourcesText = contentStr.substring(sourcesMatch.index).trim();
-      
-      // Get just the "Sources:" part
-      const sourcesHeading = "**Sources:**";
-      
-      // Extract the individual source references
-      const sourcesContent = sourcesText.substring(sourcesHeading.length).trim();
-      
-      // Split by the reference pattern [1], [2], etc.
-      const sourcePattern = /\[\d+\]/g;
-      const sourceMatches = sourcesContent.match(sourcePattern) || [];
-      
-      const sources: string[] = [];
-      let lastIndex = 0;
-      
-      // Extract each source with its number
-      sourceMatches.forEach((match) => {
-        const matchIndex = sourcesContent.indexOf(match, lastIndex);
-        const nextMatchIndex = sourcesContent.indexOf('[', matchIndex + 1);
-        
-        const endIndex = nextMatchIndex > -1 ? nextMatchIndex : sourcesContent.length;
-        const source = sourcesContent.substring(matchIndex, endIndex).trim();
-        
-        sources.push(source);
-        lastIndex = matchIndex + 1;
-      });
-      
-      return { mainContent, sourcesHeading, sources };
-    }
-    
-    // If no sources section found, return the whole content
-    return { mainContent: contentStr, sourcesHeading: '', sources: [] };
-  }, []);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center space-x-2">
-          <Input
-            type="text"
-            value={newColumn}
-            onChange={(e) => setNewColumn(e.target.value)}
-            placeholder="Add new column"
-            className="w-64"
-            disabled={loading}
-          />
-          <Button
-            onClick={addColumn}
-            disabled={loading}
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : 'Add Column'}
-          </Button>
-        </div>
+return (
+  <div className="space-y-4">
+    <div className="flex justify-between items-center mb-4">
+      <div className="flex items-center space-x-2">
+        <Input
+          type="text"
+          value={newColumn}
+          onChange={(e) => setNewColumn(e.target.value)}
+          placeholder="Add new column"
+          className="w-64"
+          disabled={loading}
+        />
+        <Button
+          onClick={addColumn}
+          disabled={loading}
+        >
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+          ) : 'Add Column'}
+        </Button>
       </div>
-      
-      {/* Hidden notification about subscription - keep as is */}
-      {isExpired && universities.length > 3 && (
-        <Alert className="bg-amber-50 border-amber-200 hidden"> {/*Subscription: Remove the hidden class*/}
-          <AlertDescription className="text-amber-800">
-            Your subscription has expired. Only showing the first 3 universities. 
-            {universities.length - 3} {universities.length - 3 === 1 ? 'university is' : 'universities are'} hidden. 
-            Upgrade to premium to see all your selected universities.
-          </AlertDescription>
-        </Alert>
-      )}
-  
-      <div className="border rounded-lg overflow-hidden">
-        <Table>
-          <TableHeader className="sticky top-0 z-10 bg-white">
-            <TableRow>
-              {columns.map((column) => (
-                <TableHead key={column.id} className="whitespace-nowrap font-medium text-gray-900">
-                  <div className="flex items-center justify-between">
-                    <span>{column.title}</span>
-                    {canDeleteColumn(column) && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeletingColumn(column.id)}
-                        className="ml-2 text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </TableHead>
-              ))}
-              <TableHead className="whitespace-nowrap font-medium text-gray-900">Status</TableHead>
-              <TableHead className="w-10"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tableData.map((row) => {
-              return (
-                <TableRow 
-                  key={row.id}
-                  className={
-                    universityStates[row.id] === 'processing' || isProcessing(row.id) ? 'bg-blue-50' :
-                    processingUniversities.has(row.id) ? 'bg-yellow-50' :
-                    universityStates[row.id] === 'failed' || getStatus(row.id) === 'failed' ? 'bg-red-50' :
-                    'bg-white'
-                  }
-                >
-                  {columns.map((column) => {
-                    const cellValue = cellStatesRef.current[`${row.id}:${column.id}`]?.value || row[column.id] || '';
-                    const { mainContent, sources } = processContent(cellValue);
-                    
-                    return (
-                      <TableCell key={`${row.id}-${column.id}`} className="relative align-middle py-4 px-4">
-                        {editingCell?.rowId === row.id && editingCell?.columnId === column.id ? (
-                          <div className="flex flex-col space-y-2">
-                            <textarea
-                              value={editValue}
-                              onChange={(e) => setEditValue(e.target.value)}
-                              className="w-full min-h-[100px] p-2 border border-gray-300 rounded-md"
-                            />
-                            <div className="flex justify-end">
-                              <Button size="sm" onClick={saveEdit} className="flex items-center space-x-1">
-                                <Save className="h-4 w-4" />
-                                <span>Save</span>
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="group relative">
-                            {isCellLoadingState(row.id, column.id) ? (
-                              <div className="flex items-center">
-                                <Loader2 className="h-4 w-4 animate-spin text-blue-500 mr-2" />
-                                <span className="text-gray-400">Loading data...</span>
+    </div>
+    
+    {/* Hidden notification about subscription - keep as is */}
+    {isExpired && universities.length > 3 && (
+      <Alert className="bg-amber-50 border-amber-200 hidden"> {/*Subscription: Remove the hidden class*/}
+        <AlertDescription className="text-amber-800">
+          Your subscription has expired. Only showing the first 3 universities. 
+          {universities.length - 3} {universities.length - 3 === 1 ? 'university is' : 'universities are'} hidden. 
+          Upgrade to premium to see all your selected universities.
+        </AlertDescription>
+      </Alert>
+    )}
+    
+    <div className="border rounded-lg overflow-hidden">
+      <Table>
+        <TableHeader className="sticky top-0 z-10 bg-white">
+          <TableRow>
+            {columns.map((column) => (
+              <TableHead key={column.id} className="whitespace-nowrap font-medium text-gray-900">
+                <div className="flex items-center justify-between">
+                  <span className="truncate">{column.title}</span>
+                  {canDeleteColumn(column) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeletingColumn(column.id)}
+                      className="ml-2 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </TableHead>
+            ))}
+            <TableHead className="whitespace-nowrap font-medium text-gray-900">Status</TableHead>
+            <TableHead className="w-10"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {tableData.map((row) => {
+            return (
+              <TableRow 
+                key={row.id}
+                className={
+                  universityStates[row.id] === 'processing' || isProcessing(row.id) ? 'bg-blue-50' :
+                  processingUniversities.has(row.id) ? 'bg-yellow-50' :
+                  universityStates[row.id] === 'failed' || getStatus(row.id) === 'failed' ? 'bg-red-50' :
+                  'bg-white'
+                }
+              >
+                {columns.map((column) => {
+                  // Get cell value directly from row for 'programs'
+                  const cellValue = column.id === 'programs' 
+                    ? row.programs 
+                    : (cellStatesRef.current[`${row.id}:${column.id}`]?.value || row[column.id] || '');
+                  
+                  return (
+                    <TableCell key={`${row.id}-${column.id}`} className="relative align-middle py-3 px-4">
+                      {isCellLoadingState(row.id, column.id) ? (
+                        <div className="flex items-center">
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-500 mr-2" />
+                          <span className="text-gray-400">Loading data...</span>
+                        </div>
+                      ) : (
+                        <div className="group relative">
+                          {/* Display programs directly for that column */}
+                          {column.id === 'programs' ? (
+                            <div>{cellValue}</div>
+                          ) : (
+                            // Regular content display for other columns
+                            <>
+                              <div className="h-24 overflow-hidden relative">
+                                <div className="prose prose-sm max-w-none">
+                                  <ReactMarkdown>{typeof cellValue === 'string' ? cellValue : ''}</ReactMarkdown>
+                                </div>
+                                
+                                {typeof cellValue === 'string' && cellValue.length > 150 && (
+                                  <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent"></div>
+                                )}
                               </div>
-                            ) : (
-                              <>
-                                {/* Main Content - always fully visible */}
-                                {mainContent && (
-                                  <div className="prose prose-sm max-w-none">
-                                    <ReactMarkdown>{mainContent}</ReactMarkdown>
-                                  </div>
-                                )}
-                                
-                                {/* Sources section - formatted as requested */}
-                                {sources.length > 0 && (
-                                  <div className="mt-4">
-                                    <div className="font-medium">Sources:</div>
-                                    {sources.map((source, index) => (
-                                      <div key={index} className="break-words">
-                                        {source}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                                
-                                {/* Edit button - positioned at right and vertically centered */}
-                                <div className="absolute inset-y-0 right-1 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleCellEdit(row.id, column.id, cellValue)}
-                                    disabled={isProcessing(row.id) || isCellLoadingState(row.id, column.id)}
-                                    className="p-1 h-6 w-6 bg-white hover:bg-gray-100 border border-gray-200 rounded-full shadow-sm"
+                              
+                              {typeof cellValue === 'string' && cellValue.length > 150 && (
+                                <div className="mt-1 text-right">
+                                  <Button 
+                                    variant="link" 
+                                    size="sm" 
+                                    className="text-blue-600 p-0 h-6"
+                                    onClick={() => openViewModal(row.id, column.id, cellValue, column.title)}
                                   >
-                                    <Pencil className="h-3 w-3" />
+                                    View more
                                   </Button>
                                 </div>
-                              </>
-                            )}
+                              )}
+                            </>
+                          )}
+                          
+                          {/* Edit button - properly vertically centered */}
+                          <div className="absolute top-0 bottom-0 right-2 flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleCellEdit(row.id, column.id, cellValue)}
+                              disabled={isProcessing(row.id) || isCellLoadingState(row.id, column.id)}
+                              className="w-6 h-6 p-0 rounded-full bg-white hover:bg-gray-100 border border-gray-200 shadow-sm flex items-center justify-center"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
                           </div>
-                        )}
-                      </TableCell>
-                    );
-                  })}
-                  
-                  <TableCell className="align-middle">
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status={universityStates[row.id] || getStatus(row.id) || row.status || 'pending'} />
-                      {(universityStates[row.id] === 'processing' || isProcessing(row.id) || processingUniversities.has(row.id)) && (
-                        <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                        </div>
                       )}
-                    </div>
-                  </TableCell>
-                  
-                  <TableCell className="w-10 align-middle">
-                    {isPremium && onRemoveUniversity && !isProcessing(row.id) && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          const university = universities.find(u => u.id === row.id);
-                          if (university) onRemoveUniversity(university);
-                        }}
-                        className="text-red-500 hover:text-red-700 p-1 h-7 w-7"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                    </TableCell>
+                  );
+                })}
+                
+                <TableCell className="align-middle">
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={universityStates[row.id] || getStatus(row.id) || row.status || 'pending'} />
+                    {(universityStates[row.id] === 'processing' || isProcessing(row.id) || processingUniversities.has(row.id)) && (
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
                     )}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-      
-      {loading && (
-        <div className="flex justify-center items-center p-4">
-          <Loader2 className="h-6 w-6 animate-spin" />
-        </div>
-      )}
-  
-      {/* Delete Column Dialog */}
-      <AlertDialog open={!!deletingColumn} onOpenChange={() => setDeletingColumn(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Column</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this column? This action cannot be undone
-              and will remove all associated data.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deletingColumn && handleDeleteColumn(deletingColumn)}
-              className="bg-red-500 hover:bg-red-600"
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-  
-      {/* Markdown styling */}
-      <style jsx global>{`
-        .markdown-content ul, .prose ul {
-          list-style-type: disc;
-          padding-left: 1.5rem;
-          margin: 0.5rem 0;
-        }
-        
-        .markdown-content ol, .prose ol {
-          list-style-type: decimal;
-          padding-left: 1.5rem;
-          margin: 0.5rem 0;
-        }
-        
-        .markdown-content p, .prose p {
-          margin: 0.5rem 0;
-          word-break: break-word;
-        }
-        
-        .markdown-content strong, .markdown-content b, 
-        .prose strong, .prose b {
-          font-weight: 600;
-        }
-        
-        .markdown-content em, .markdown-content i,
-        .prose em, .prose i {
-          font-style: italic;
-        }
-        
-        .markdown-content h1, .markdown-content h2, .markdown-content h3, 
-        .markdown-content h4, .markdown-content h5, .markdown-content h6,
-        .prose h1, .prose h2, .prose h3, 
-        .prose h4, .prose h5, .prose h6 {
-          font-weight: 600;
-          margin: 0.75rem 0 0.5rem 0;
-        }
-        
-        .markdown-content a, .prose a {
-          color: #2563eb;
-          text-decoration: underline;
-        }
-        
-        .markdown-content blockquote, .prose blockquote {
-          border-left: 3px solid #e5e7eb;
-          padding-left: 1rem;
-          margin: 0.75rem 0;
-          color: #4b5563;
-        }
-        
-        .markdown-content code, .prose code {
-          background-color: #f3f4f6;
-          padding: 0.1rem 0.2rem;
-          border-radius: 0.25rem;
-          font-family: monospace;
-        }
-        
-        .markdown-content pre, .prose pre {
-          background-color: #f3f4f6;
-          padding: 0.75rem;
-          border-radius: 0.375rem;
-          overflow-x: auto;
-          margin: 0.75rem 0;
-        }
-        
-        .markdown-content pre code, .prose pre code {
-          background-color: transparent;
-          padding: 0;
-        }
-      `}</style>
+                  </div>
+                </TableCell>
+                
+                <TableCell className="w-10 align-middle">
+                  {isPremium && onRemoveUniversity && !isProcessing(row.id) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const university = universities.find(u => u.id === row.id);
+                        if (university) onRemoveUniversity(university);
+                      }}
+                      className="text-red-500 hover:text-red-700 p-0 h-7 w-7 flex items-center justify-center"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
     </div>
-  )};
+    
+    {loading && (
+      <div className="flex justify-center items-center p-4">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    )}
+
+    {/* Delete Column Dialog */}
+    <AlertDialog open={!!deletingColumn} onOpenChange={() => setDeletingColumn(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Column</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete this column? This action cannot be undone
+            and will remove all associated data.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={() => deletingColumn && handleDeleteColumn(deletingColumn)}
+            className="bg-red-500 hover:bg-red-600"
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    
+    {/* View Modal with improved styling */}
+    <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold">{viewModalContent?.title || 'Content'}</DialogTitle>
+        </DialogHeader>
+        
+        <div className="mt-4">
+          {viewModalContent && (
+            <div className="prose prose-sm max-w-none bg-white rounded-lg p-6 shadow-sm">
+              <ReactMarkdown>{viewModalContent.value}</ReactMarkdown>
+            </div>
+          )}
+        </div>
+        
+        <DialogFooter className="mt-6">
+          <Button 
+            variant="outline" 
+            onClick={() => setViewModalOpen(false)}
+          >
+            Close
+          </Button>
+          {viewModalContent && (
+            <Button 
+              onClick={() => {
+                setViewModalOpen(false);
+                if (viewModalContent) {
+                  handleCellEdit(viewModalContent.rowId, viewModalContent.columnId, viewModalContent.value);
+                }
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    
+    {/* Edit Modal */}
+    <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold">Edit Cell Content</DialogTitle>
+        </DialogHeader>
+        
+        <div className="mt-4">
+          <textarea
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            className="w-full min-h-[300px] p-3 border border-gray-300 rounded-md"
+            placeholder="Enter content here..."
+          />
+        </div>
+        
+        <DialogFooter className="mt-6">
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setEditModalOpen(false);
+              setEditingCell(null);
+              setEditValue('');
+            }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={saveEdit}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            Save Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <style jsx global>{`
+      .markdown-content ul, .prose ul {
+        list-style-type: disc;
+        padding-left: 1.5rem;
+        margin: 0.5rem 0;
+      }
+      
+      .markdown-content ol, .prose ol {
+        list-style-type: decimal;
+        padding-left: 1.5rem;
+        margin: 0.5rem 0;
+      }
+      
+      .markdown-content p, .prose p {
+        margin: 0.5rem 0;
+        word-break: break-word;
+      }
+      
+      .markdown-content strong, .markdown-content b, 
+      .prose strong, .prose b {
+        font-weight: 600;
+      }
+      
+      .markdown-content em, .markdown-content i,
+      .prose em, .prose i {
+        font-style: italic;
+      }
+      
+      .markdown-content h1, .markdown-content h2, .markdown-content h3, 
+      .markdown-content h4, .markdown-content h5, .markdown-content h6,
+      .prose h1, .prose h2, .prose h3, 
+      .prose h4, .prose h5, .prose h6 {
+        font-weight: 600;
+        margin: 0.75rem 0 0.5rem 0;
+      }
+      
+      .markdown-content a, .prose a {
+        color: #2563eb;
+        text-decoration: underline;
+        word-break: break-all;
+      }
+      
+      .markdown-content blockquote, .prose blockquote {
+        border-left: 3px solid #e5e7eb;
+        padding-left: 1rem;
+        margin: 0.75rem 0;
+        color: #4b5563;
+      }
+      
+      .markdown-content code, .prose code {
+        background-color: #f3f4f6;
+        padding: 0.1rem 0.2rem;
+        border-radius: 0.25rem;
+        font-family: monospace;
+        white-space: pre-wrap;
+      }
+      
+      .markdown-content pre, .prose pre {
+        background-color: #f3f4f6;
+        padding: 0.75rem;
+        border-radius: 0.375rem;
+        overflow-x: auto;
+        margin: 0.75rem 0;
+      }
+      
+      .markdown-content pre code, .prose pre code {
+        background-color: transparent;
+        padding: 0;
+      }
+      
+      /* Remove horizontal rule (hr) styling that causes unwanted lines */
+      .prose hr {
+        display: none;
+      }
+    `}</style>
+  </div>
+)};
